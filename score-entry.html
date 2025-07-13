@@ -1343,6 +1343,8 @@
                 }
             }
         }
+
+        function renderScoreSheet(round) {
             document.getElementById('sheetClass').textContent = round.className;
             document.getElementById('sheetRound').textContent = `Round ${round.roundNumber}`;
             document.getElementById('sheetDate').textContent = round.date ? round.date.toLocaleDateString() : 'Date TBD';
@@ -1455,7 +1457,8 @@
 
             document.getElementById('scoreSheet').style.display = 'block';
             document.getElementById('noDataMessage').style.display = 'none';
-   
+        }
+
         // ===== FEO TOGGLE FUNCTIONALITY =====
         
         async function toggleEntryType(participantId) {
