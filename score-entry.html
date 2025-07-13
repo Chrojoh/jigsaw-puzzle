@@ -864,25 +864,9 @@
                     }
                 });
 
-             if (allRounds.length === 0) {
-    throw new Error('No rounds with participants found');
-}
-
-// Sort rounds by C-WAGS class order and round number
-allRounds.sort((a, b) => {
-    const orderA = getCWAGSClassOrder(a.className);
-    const orderB = getCWAGSClassOrder(b.className);
-    
-    // Sort by class order first
-    if (orderA !== orderB) {
-        return orderA - orderB;
-    }
-    
-    // Then by round number within the same class
-    return (a.roundNumber || 1) - (b.roundNumber || 1);
-});
-
-renderRoundSelector();
+                if (allRounds.length === 0) {
+                    throw new Error('No rounds with participants found');
+                }
 
                 renderRoundSelector();
                 
