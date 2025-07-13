@@ -285,7 +285,7 @@
             font-size: 0.85rem;
         }
 
-        /* NEW: Entry type column styling */
+        /* Entry type column styling */
         .entry-type-cell {
             width: 120px;
             min-width: 120px;
@@ -342,7 +342,7 @@
             color: #856404;
         }
 
-        /* NEW: Row styling based on entry type */
+        /* Row styling based on entry type */
         .entry-feo {
             background-color: #fff3cd !important;
         }
@@ -411,7 +411,7 @@
             margin-bottom: 2rem;
         }
 
-        /* NEW: Last minute addition section */
+        /* Last minute addition section */
         .last-minute-section {
             background: #e7f3ff;
             border: 2px dashed #007bff;
@@ -442,7 +442,7 @@
             transform: translateY(-2px);
         }
 
-        /* NEW: Modal styling */
+        /* Modal styling */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -707,6 +707,23 @@
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
+
+        // C-WAGS Standard Class Order - same as running-order.html
+        const CWAGS_CLASS_ORDER = [
+            'Patrol 1', 'Detective 2', 'Investigator 3', 'Super Sleuth 4', 'Private Inv', 'Det Diversions',
+            'Ranger 1', 'Ranger 2', 'Ranger 3', 'Ranger 4', 'Ranger 5',
+            'Dasher 3', 'Dasher 4', 'Dasher 5', 'Dasher 6',
+            'Obedience 1', 'Obedience 2', 'Obedience 3', 'Obedience 4', 'Obedience 5',
+            'Starter', 'Advanced', 'Pro', 'ARF',
+            'Zoom 1', 'Zoom 1.5', 'Zoom 2',
+            'Games 1', 'Games 2', 'Games 3', 'Games 4'
+        ];
+
+        // Get CWAGS class order index for sorting
+        function getCwagsClassOrder(className) {
+            const index = CWAGS_CLASS_ORDER.indexOf(className);
+            return index === -1 ? 999 : index; // Unknown classes go to end
+        }
 
         // Global variables
         let currentUser = null;
@@ -1135,6 +1152,21 @@
                 roundsByDay[round.dayIndex].push(round);
             });
 
+            // Sort rounds within each day by CWAGS class order
+            Object.keys(roundsByDay).forEach(dayIndex => {
+                roundsByDay[dayIndex].sort((a, b) => {
+                    const orderA = getCwagsClassOrder(a.className);
+                    const orderB = getCwagsClassOrder(b.className);
+                    
+                    if (orderA !== orderB) {
+                        return orderA - orderB; // Sort by CWAGS class order first
+                    }
+                    
+                    // If same class, sort by round number
+                    return a.roundNumber - b.roundNumber;
+                });
+            });
+
             // Create day tabs and content
             Object.keys(roundsByDay).forEach((dayIndex, tabIndex) => {
                 const dayData = currentTrial.days[dayIndex];
@@ -1160,6 +1192,7 @@
                 const roundsGrid = document.createElement('div');
                 roundsGrid.className = 'day-rounds';
 
+                // Now rounds are sorted in CWAGS order
                 roundsByDay[dayIndex].forEach(round => {
                     const roundCard = document.createElement('div');
                     roundCard.className = 'round-card';
@@ -1783,30 +1816,28 @@
             console.log("📝 Registration data found:", registration);
             console.log("Available registration fields:", Object.keys(registration));
             
-            // Based on your Excel structure:
-            // Column A: cwagsNumber
-            // Column B: dogCallName  
-            // Column C: handlerName
+            // FIXED: Based on your console output showing the swap issue
+            // Your registration data has the fields swapped in the Excel
+            // Console shows: Handler="Luka", Dog="Karen Yuen" which is backwards
             
             let handlerName = '';
             let dogCallName = '';
             
-            // Use the correct field mapping from your Excel structure
+            // CORRECTED: Swap the field assignments based on your actual data structure
             if (registration.handlerName && registration.dogCallName) {
-                // Standard case - fields are correctly named
-                handlerName = registration.handlerName;
-                dogCallName = registration.dogCallName;
+                // Your data appears to have them swapped in the source
+                handlerName = registration.dogCallName;    // This actually contains handler name
+                dogCallName = registration.handlerName;    // This actually contains dog name
             } else if (registration.handler && registration.dog) {
-                // Alternative field names
-                handlerName = registration.handler;
-                dogCallName = registration.dog;
+                handlerName = registration.dog;    // Swapped
+                dogCallName = registration.handler; // Swapped
             } else {
-                // Try other possible field variations
-                handlerName = registration.handlerName || registration.handler || registration.Handler || '';
-                dogCallName = registration.dogCallName || registration.dog || registration.Dog || registration.dogName || '';
+                // Try other variations with swap correction
+                handlerName = registration.dogCallName || registration.dog || registration.Dog || registration.dogName || '';
+                dogCallName = registration.handlerName || registration.handler || registration.Handler || '';
             }
             
-            console.log(`📝 Extracted: Handler="${handlerName}", Dog="${dogCallName}"`);
+            console.log(`📝 CORRECTED: Handler="${handlerName}", Dog="${dogCallName}"`);
             
             // Populate the form with correct field assignments
             const handlerField = document.getElementById('handlerNameInput');
@@ -1826,7 +1857,7 @@
                     dogField.style.background = '';
                 }, 3000);
                 
-                console.log(`✅ Form populated: Handler input="${handlerField.value}", Dog input="${dogField.value}"`);
+                console.log(`✅ Form populated CORRECTLY: Handler="${handlerField.value}", Dog="${dogField.value}"`);
             }
         }
 
