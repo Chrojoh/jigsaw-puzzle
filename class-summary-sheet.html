@@ -1074,6 +1074,12 @@
                 
                 const participantsList = Array.from(participantsMap.values());
                 
+                console.log(`📊 Final summary for ${className}:`, {
+                    participants: participantsList.length,
+                    rounds: roundsData.length,
+                    hasScores: roundsData.some(r => r.hasScores)
+                });
+                
                 return {
                     className: className,
                     trialName: currentTrial.clubName || 'Unknown Trial',
@@ -1092,7 +1098,22 @@
                 
             } catch (error) {
                 console.error(`Error processing ${className}:`, error);
-                return await generateOriginalSummary(className);
+                // Ensure we return the proper structure even on error
+                return {
+                    className: className,
+                    trialName: currentTrial.clubName || 'Unknown Trial',
+                    classType: detectClassType(className),
+                    participants: [],
+                    rounds: [],
+                    totalParticipants: 0,
+                    totalRounds: 0,
+                    debugInfo: {
+                        regularIncluded: 0,
+                        feoFiltered: 0,
+                        orphanedFiltered: 0,
+                        totalParticipants: 0
+                    }
+                };
             }
         }
 
@@ -1271,11 +1292,26 @@
                     currentClass = selectedClass;
                     summaryData = await generateSummaryForClass(selectedClass);
 
+                    console.log('🔍 DEBUG: Summary data structure:', summaryData);
+                    console.log('🔍 DEBUG: summaryData.rounds type:', typeof summaryData.rounds);
+                    console.log('🔍 DEBUG: summaryData.rounds is array:', Array.isArray(summaryData.rounds));
+
                     if (!summaryData) {
                         showStatus('No rounds found for this class. Please ensure running orders are generated first.', 'error');
                         document.getElementById('noDataMessage').style.display = 'block';
                         document.getElementById('summaryContainer').style.display = 'none';
                         return;
+                    }
+
+                    // Ensure summaryData has the correct structure
+                    if (!Array.isArray(summaryData.rounds)) {
+                        console.warn('⚠️ summaryData.rounds is not an array, converting...');
+                        summaryData.rounds = [];
+                    }
+
+                    if (!Array.isArray(summaryData.participants)) {
+                        console.warn('⚠️ summaryData.participants is not an array, converting...');
+                        summaryData.participants = [];
                     }
 
                     if (summaryData.debugInfo) {
@@ -1315,7 +1351,8 @@ Final participant count: ${summaryData.debugInfo.totalParticipants}`);
             let totalFails = 0;
             let totalScheduled = 0;
 
-            if (summaryData.rounds) {
+            // Check if summaryData.rounds exists and is an array
+            if (summaryData.rounds && Array.isArray(summaryData.rounds)) {
                 summaryData.rounds.forEach(round => {
                     if (round.hasScores) {
                         Object.entries(round.participants).forEach(([participantId, result]) => {
@@ -1344,6 +1381,12 @@ Final participant count: ${summaryData.debugInfo.totalParticipants}`);
                         }
                     }
                 });
+            } else {
+                console.warn('summaryData.rounds is not an array:', summaryData.rounds);
+                // If rounds is not an array, try to use other available data
+                if (summaryData.participants) {
+                    totalScheduled = summaryData.participants.length || 0;
+                }
             }
 
             const passRate = totalRuns > 0 ? ((totalPasses / totalRuns) * 100).toFixed(1) : '0';
