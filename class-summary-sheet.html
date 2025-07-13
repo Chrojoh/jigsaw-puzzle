@@ -1915,10 +1915,9 @@
 
         function generateExcelSheetData(classData) {
             const data = [];
-            data.push(['Class Summary Report']);
+            data.push([]);
             data.push(['Trial', classData.trialName]);
-            data.push(['Class', classData.className]);
-            data.push(['Generated', new Date().toLocaleDateString()]);
+            data.push(['', '', '', '', 'Class', classData.className]);
             data.push([]);
 
             const judgeRow = ['C-WAGS Number', 'Dog Name', 'Handler Name'];
