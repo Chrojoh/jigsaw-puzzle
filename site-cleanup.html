@@ -850,6 +850,8 @@
                 trialId: trialId,
                 runningOrderParticipants: new Set(),
                 entryFormParticipants: new Set(),
+                feoParticipants: new Set(),
+                regularParticipants: new Set(),
                 ghostEntries: [],
                 orphanedScores: [],
                 totalGhosts: 0
@@ -885,9 +887,9 @@
                 addLogEntry(`Found ${report.runningOrderParticipants.size} participants in running orders`);
             }
 
-            addLogEntry('📝 Loading entry form data...');
+            addLogEntry('📝 Loading entry form data and checking FEO status...');
             
-            // Load entry form participants
+            // Load entry form participants and track FEO status
             const entriesSnapshot = await db.collection('entries')
                 .where('trialId', '==', trialId)
                 .get();
@@ -903,19 +905,31 @@
                             doc.id
                         ];
                         
-                        possibleIds.forEach(id => report.entryFormParticipants.add(id));
+                        possibleIds.forEach(id => {
+                            report.entryFormParticipants.add(id);
+                            
+                            // Track FEO vs Regular status
+                            if (selectedEntry.type === 'feo') {
+                                report.feoParticipants.add(id);
+                                addLogEntry(`  FEO entry: ${entryData.handlerName} - ${entryData.dogCallName}`, 'info');
+                            } else {
+                                report.regularParticipants.add(id);
+                            }
+                        });
                         
                         // Check if this entry appears in running orders
                         const inRunningOrder = possibleIds.some(id => report.runningOrderParticipants.has(id));
                         
                         if (!inRunningOrder) {
+                            // This is a TRUE ghost entry - appears in forms but not in running orders
                             report.ghostEntries.push({
                                 docId: doc.id,
                                 handlerName: entryData.handlerName,
                                 dogCallName: entryData.dogCallName,
                                 className: selectedEntry.className,
                                 cwagsNumber: entryData.cwagsNumber,
-                                reason: 'Entry exists in forms but not in running orders'
+                                entryType: selectedEntry.type || 'regular',
+                                reason: 'Entry exists in forms but not in running orders (TRUE GHOST)'
                             });
                         }
                     });
@@ -949,18 +963,27 @@
         }
 
         function displayGhostScanResults(report) {
-            addLogEntry('📊 GHOST ENTRY SCAN RESULTS:', 'info');
+            addLogEntry('📊 COMPREHENSIVE SCAN RESULTS:', 'info');
             addLogEntry(`Running Order Participants: ${report.runningOrderParticipants.size}`, 'info');
             addLogEntry(`Entry Form Participants: ${report.entryFormParticipants.size}`, 'info');
-            addLogEntry(`Ghost Entries Found: ${report.ghostEntries.length}`, report.ghostEntries.length > 0 ? 'warning' : 'success');
-            addLogEntry(`Orphaned Scores Found: ${report.orphanedScores.length}`, report.orphanedScores.length > 0 ? 'warning' : 'success');
+            addLogEntry(`FEO Participants: ${report.feoParticipants.size} (Should appear in running orders & scores, NOT in summaries)`, 'info');
+            addLogEntry(`Regular Participants: ${report.regularParticipants.size} (Should appear everywhere)`, 'info');
+            addLogEntry(`TRUE Ghost Entries: ${report.ghostEntries.length}`, report.ghostEntries.length > 0 ? 'error' : 'success');
+            addLogEntry(`Orphaned Scores: ${report.orphanedScores.length}`, report.orphanedScores.length > 0 ? 'warning' : 'success');
+            
+            addLogEntry('', 'info');
+            addLogEntry('🔍 EXPLANATION:', 'info');
+            addLogEntry('• FEO entries should appear in running orders & score sheets but NOT in summary reports', 'info');
+            addLogEntry('• Ghost entries should not appear anywhere - they are disconnected/deleted entries', 'info');
+            addLogEntry('• This scan only identifies TRUE ghost entries that need cleanup', 'info');
+            addLogEntry('', 'info');
             
             if (report.ghostEntries.length > 0) {
-                addLogEntry('👻 GHOST ENTRIES FOUND:', 'warning');
+                addLogEntry('👻 TRUE GHOST ENTRIES FOUND (these need cleanup):', 'error');
                 report.ghostEntries.forEach(ghost => {
-                    addLogEntry(`  • ${ghost.handlerName} - ${ghost.dogCallName} (${ghost.cwagsNumber}) in ${ghost.className}`, 'warning');
+                    addLogEntry(`  • ${ghost.handlerName} - ${ghost.dogCallName} (${ghost.cwagsNumber}) in ${ghost.className} [${ghost.entryType.toUpperCase()}]`, 'error');
                 });
-                addLogEntry('These entries appear in reports but not in running orders', 'warning');
+                addLogEntry('These entries appear in summary reports but have no corresponding running order data', 'error');
             }
             
             if (report.orphanedScores.length > 0) {
@@ -971,9 +994,10 @@
             }
             
             if (report.totalGhosts === 0) {
-                addLogEntry('✅ No ghost entries or orphaned data found!', 'success');
+                addLogEntry('✅ No TRUE ghost entries found! FEO filtering is working correctly.', 'success');
+                addLogEntry('If you still see unwanted entries in summaries, they may be FEO entries that need to be excluded from summary reports.', 'info');
             } else {
-                addLogEntry(`⚠️ Total issues found: ${report.totalGhosts}`, 'warning');
+                addLogEntry(`⚠️ Total TRUE ghost issues found: ${report.totalGhosts}`, 'error');
                 addLogEntry('Run "Clean Ghost Entries" to fix these issues', 'info');
             }
         }
