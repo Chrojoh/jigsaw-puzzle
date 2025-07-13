@@ -437,7 +437,11 @@
                     </thead>
                     <tbody id="summaryTableBody">
                         <!-- Table body will be generated here -->
-                    </tbody>
+                <th>Class Type</th>
+                    <td style="text-align: center; font-weight: 600; color: ${getClassTypeColor(classData.classType)}">
+                    ${getClassTypeDisplay(classData.classType)}
+                    </td>
+                   </tbody>
                 </table>
             </div>
 
