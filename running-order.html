@@ -1551,7 +1551,7 @@ async function loadTrials() {
             }
         }
 
-       / UPDATED createScoreSheetPage function - replace existing one in running-order.html
+       // UPDATED createScoreSheetPage function - replace existing one in running-order.html
 async function createScoreSheetPage(pdfDoc, page, round, dayData) {
     const { width, height } = page.getSize();
     const font = await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
