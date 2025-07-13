@@ -293,6 +293,22 @@
             border: 1px solid #dee2e6;
             border-radius: 4px;
             text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        /* Passing score styling - medium green background with lighter center */
+        .pass-cell input.passing {
+            background: linear-gradient(135deg, #28a745 0%, #34ce57 20%, #6fd374 50%, #34ce57 80%, #28a745 100%);
+            color: #000;
+            font-weight: bold;
+            border: 2px solid #1e7e34;
+            box-shadow: 0 2px 4px rgba(40, 167, 69, 0.3);
+        }
+
+        .pass-cell input.passing:focus {
+            outline: none;
+            border-color: #155724;
+            box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.25);
         }
 
         .entry-type-cell {
@@ -553,6 +569,16 @@
         function detectClassType(className) {
             const lowerClassName = className.toLowerCase();
             
+            // Rally detection - check for rally classes first
+            if (lowerClassName.includes('rally') || 
+                lowerClassName.includes('starter') || 
+                lowerClassName.includes('advanced') || 
+                lowerClassName.includes('pro') || 
+                lowerClassName.includes('arf') || 
+                lowerClassName.includes('zoom')) {
+                return 'rally';
+            }
+            
             // Obedience detection
             if (lowerClassName.includes('obedience') || lowerClassName.includes('obed')) {
                 if (lowerClassName.includes('5')) return 'obedience5';
@@ -566,11 +592,6 @@
             // Games detection
             if (lowerClassName.includes('games') || lowerClassName.includes('game')) {
                 return 'games';
-            }
-            
-            // Rally detection
-            if (lowerClassName.includes('rally')) {
-                return 'rally';
             }
             
             // Scent work detection (default)
@@ -1213,8 +1234,9 @@
                         <td class="pass-cell">
                             <input type="text" 
                                    value="${participantScores.passIndicator || ''}" 
-                                   onchange="updateScore('${participantId}', 'passIndicator', this.value)"
+                                   onchange="updateScore('${participantId}', 'passIndicator', this.value); updatePassStyling('${participantId}', this.value)"
                                    placeholder="${passIndicator}"
+                                   class="${participantScores.passIndicator ? 'passing' : ''}"
                                    readonly>
                         </td>
                     `;
@@ -1264,28 +1286,25 @@
             updateScore(participantId, 'numericalScore', score);
             
             const numScore = parseInt(score);
+            const row = document.querySelector(`[data-participant-id="${participantId}"]`);
+            const passCell = row ? row.querySelector('.pass-cell input') : null;
+            
             if (!isNaN(numScore) && numScore >= passingScore) {
                 // Automatically mark as passed with appropriate indicator
                 updateScore(participantId, 'passIndicator', passIndicator);
                 
-                // Update the visual indicator
-                const row = document.querySelector(`[data-participant-id="${participantId}"]`);
-                if (row) {
-                    const passCell = row.querySelector('.pass-cell input');
-                    if (passCell) {
-                        passCell.value = passIndicator;
-                    }
+                // Update the visual indicator with styling
+                if (passCell) {
+                    passCell.value = passIndicator;
+                    passCell.classList.add('passing');
                 }
             } else {
                 // Clear pass indicator if score is below passing
                 updateScore(participantId, 'passIndicator', '');
                 
-                const row = document.querySelector(`[data-participant-id="${participantId}"]`);
-                if (row) {
-                    const passCell = row.querySelector('.pass-cell input');
-                    if (passCell) {
-                        passCell.value = '';
-                    }
+                if (passCell) {
+                    passCell.value = '';
+                    passCell.classList.remove('passing');
                 }
             }
         }
@@ -1370,6 +1389,21 @@
             } catch (error) {
                 console.error('❌ Error updating related records:', error);
                 throw error;
+            }
+        }
+
+        // Update pass indicator styling
+        function updatePassStyling(participantId, value) {
+            const row = document.querySelector(`[data-participant-id="${participantId}"]`);
+            if (row) {
+                const passCell = row.querySelector('.pass-cell input');
+                if (passCell) {
+                    if (value && value.trim() !== '') {
+                        passCell.classList.add('passing');
+                    } else {
+                        passCell.classList.remove('passing');
+                    }
+                }
             }
         }
 
