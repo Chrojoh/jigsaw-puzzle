@@ -680,17 +680,115 @@
                 }
 
                 const runningOrderData = orderDoc.data();
-                let finalizedData = runningOrderData.finalizedRunningOrders || 
-                                   runningOrderData.generatedSheets || 
-                                   runningOrderData.roundOrders || {};
+                console.log('📊 Running order data structure:', Object.keys(runningOrderData));
+                console.log('📊 Full running order data sample:', runningOrderData);
+                
+                // Check for different possible data structures your system might use
+                let finalizedData = null;
+                
+                if (runningOrderData.finalizedRunningOrders) {
+                    finalizedData = runningOrderData.finalizedRunningOrders;
+                    console.log('✅ Using finalizedRunningOrders');
+                } else if (runningOrderData.generatedSheets) {
+                    finalizedData = runningOrderData.generatedSheets;
+                    console.log('✅ Using generatedSheets');
+                } else if (runningOrderData.roundOrders) {
+                    console.log('✅ Using roundOrders structure');
+                    console.log('roundOrders type:', typeof runningOrderData.roundOrders);
+                    console.log('roundOrders content:', runningOrderData.roundOrders);
+                    
+                    finalizedData = {};
+                    
+                    // Convert roundOrders to expected format
+                    if (Array.isArray(runningOrderData.roundOrders)) {
+                        console.log('📋 Processing roundOrders as array...');
+                        runningOrderData.roundOrders.forEach((roundOrder, index) => {
+                            console.log(`Processing roundOrder ${index}:`, roundOrder);
+                            if (roundOrder.rounds) {
+                                Object.entries(roundOrder.rounds).forEach(([roundKey, roundData]) => {
+                                    console.log(`Found round ${roundKey}:`, roundData);
+                                    if (roundData.participants && roundData.participants.length > 0) {
+                                        finalizedData[roundKey] = roundData;
+                                        console.log(`✅ Added round ${roundKey} with ${roundData.participants.length} participants`);
+                                    } else {
+                                        console.log(`⚠️ Skipping round ${roundKey} - no participants`);
+                                    }
+                                });
+                            } else {
+                                console.log(`⚠️ roundOrder ${index} has no 'rounds' property`);
+                            }
+                        });
+                    } else if (typeof runningOrderData.roundOrders === 'object') {
+                        console.log('📋 Processing roundOrders as object...');
+                        Object.entries(runningOrderData.roundOrders).forEach(([key, value]) => {
+                            console.log(`Processing roundOrder key ${key}:`, value);
+                            console.log(`Value type: ${typeof value}, Is array: ${Array.isArray(value)}, Length: ${value?.length}`);
+                            
+                            // Check if value is directly an array of participants
+                            if (Array.isArray(value) && value.length > 0) {
+                                // Your structure: roundKey -> Array of participants directly
+                                finalizedData[key] = { participants: value };
+                                console.log(`✅ Added round ${key} with ${value.length} participants (direct array)`);
+                            } else if (value && typeof value === 'object' && value.participants && Array.isArray(value.participants) && value.participants.length > 0) {
+                                // Standard structure: roundKey -> Object with participants property
+                                finalizedData[key] = value;
+                                console.log(`✅ Added round ${key} with ${value.participants.length} participants (object with participants)`);
+                            } else if (value && typeof value === 'object' && value.rounds) {
+                                // Nested structure
+                                console.log(`Processing nested rounds in ${key}:`, value.rounds);
+                                Object.entries(value.rounds).forEach(([roundKey, roundData]) => {
+                                    console.log(`Found nested round ${roundKey}:`, roundData);
+                                    if (Array.isArray(roundData) && roundData.length > 0) {
+                                        finalizedData[roundKey] = { participants: roundData };
+                                        console.log(`✅ Added nested round ${roundKey} with ${roundData.length} participants (direct array)`);
+                                    } else if (roundData && roundData.participants && Array.isArray(roundData.participants) && roundData.participants.length > 0) {
+                                        finalizedData[roundKey] = roundData;
+                                        console.log(`✅ Added nested round ${roundKey} with ${roundData.participants.length} participants (object)`);
+                                    }
+                                });
+                            } else {
+                                console.log(`⚠️ Skipping key ${key} - no participants or unexpected structure`);
+                                console.log(`Full value inspection:`, value);
+                            }
+                        });
+                    }
+                } else {
+                    console.error('❌ No recognized running order structure found');
+                    console.log('Available keys:', Object.keys(runningOrderData));
+                    throw new Error('No running order data found. Please generate running orders first.');
+                }
+
+                console.log('📊 Final processed data keys:', Object.keys(finalizedData));
+                console.log('📊 Final processed data sample:', finalizedData);
+
+                if (!finalizedData || Object.keys(finalizedData).length === 0) {
+                    console.error('❌ No rounds with participants found after processing');
+                    console.log('Original running order structure:', runningOrderData);
+                    throw new Error('No rounds with participants found in running order data. Please check that running orders have been generated with participant assignments.');
+                }
 
                 allRounds = [];
 
+                // Process rounds from the available data structure
                 Object.entries(finalizedData).forEach(([roundKey, roundData]) => {
+                    console.log(`📝 Processing round ${roundKey}:`, roundData);
+                    
                     try {
-                        const [dayIndex, classIndex, roundIndex] = roundKey.split('-').map(Number);
+                        // Handle both old malformed keys and new standard keys
+                        let dayIndex, classIndex, roundIndex;
                         
+                        if (roundKey.includes('--')) {
+                            // Fix double dash issue: "0--1-0" -> "0-1-0"
+                            const fixedKey = roundKey.replace(/--+/g, '-');
+                            console.log(`🔧 Fixed malformed key: "${roundKey}" -> "${fixedKey}"`);
+                            [dayIndex, classIndex, roundIndex] = fixedKey.split('-').map(Number);
+                        } else {
+                            [dayIndex, classIndex, roundIndex] = roundKey.split('-').map(Number);
+                        }
+                        
+                        // Validate indices
                         if (isNaN(dayIndex) || isNaN(classIndex) || isNaN(roundIndex)) {
+                            console.warn(`⚠️ Invalid round key format: ${roundKey}`);
                             return;
                         }
                         
@@ -711,7 +809,14 @@
                                 participants: roundData.participants || []
                             };
                             
+                            console.log(`✅ Added round: ${roundInfo.className} Round ${roundInfo.roundNumber} (${roundInfo.participants.length} participants)`);
                             allRounds.push(roundInfo);
+                        } else {
+                            console.warn(`⚠️ Skipping round ${roundKey}: missing data or no participants`);
+                            console.log('Day:', day ? 'exists' : 'missing');
+                            console.log('Class:', cls ? cls.className : 'missing');
+                            console.log('Round:', round ? `Round ${round.roundNumber}` : 'missing');
+                            console.log('Participants:', roundData.participants ? roundData.participants.length : 0);
                         }
                     } catch (error) {
                         console.error(`❌ Error processing round ${roundKey}:`, error);
