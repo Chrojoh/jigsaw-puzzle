@@ -484,23 +484,33 @@
         let allClassNames = [];
         let entriesData = {};
 
-        // C-WAGS class order mapping
+        // C-WAGS class order mapping with comprehensive variations
         const CWAGS_CLASS_ORDER = {
-            'PATROL 1': 1, 'PATROL1': 1, 'P1': 1,
-            'DETECTIVE 2': 2, 'DETECTIVE2': 2, 'DET2': 2, 'D2': 2,
-            'INVESTIGATOR 3': 3, 'INVESTIGATOR3': 3, 'INV3': 3, 'I3': 3,
-            'SUPER SLEUTH 4': 4, 'SUPER SLEUTH4': 4, 'SUPERSLEUTH4': 4, 'SS4': 4, 'S4': 4,
-            'PRIVATE INV': 5, 'PRIVATE INVESTIGATOR': 5, 'PRIVATEINV': 5, 'PRIV INV': 5, 'PI': 5,
-            'DET DIVERSIONS': 6, 'DETECTIVE DIVERSIONS': 6, 'DETDIVERSIONS': 6, 'DD': 6,
-            'RANGER 1': 7, 'RANGER1': 7, 'R1': 7,
-            'RANGER 2': 8, 'RANGER2': 8, 'R2': 8,
-            'RANGER 3': 9, 'RANGER3': 9, 'R3': 9,
-            'RANGER 4': 10, 'RANGER4': 10, 'R4': 10,
-            'RANGER 5': 11, 'RANGER5': 11, 'R5': 11,
-            'DASHER 3': 12, 'DASHER3': 12, 'DASH3': 12, 'DA3': 12,
-            'DASHER 4': 13, 'DASHER4': 13, 'DASH4': 13, 'DA4': 13,
-            'DASHER 5': 14, 'DASHER5': 14, 'DASH5': 14, 'DA5': 14,
-            'DASHER 6': 15, 'DASHER6': 15, 'DASH6': 15, 'DA6': 15
+            // Scent Detective Traditional Classes (1-6)
+            'PATROL 1': 1, 'PATROL1': 1, 'P1': 1, 'SCENT PATROL': 1, 'PATROL': 1,
+            'DETECTIVE 2': 2, 'DETECTIVE2': 2, 'DET2': 2, 'D2': 2, 'DETECTIVE': 2,
+            'INVESTIGATOR 3': 3, 'INVESTIGATOR3': 3, 'INV3': 3, 'I3': 3, 'INVESTIGATOR': 3,
+            'SUPER SLEUTH 4': 4, 'SUPER SLEUTH4': 4, 'SUPERSLEUTH4': 4, 'SS4': 4, 'S4': 4, 'SUPER SLEUTH': 4, 'SUPERSLEUTH': 4,
+            'PRIVATE INV': 5, 'PRIVATE INVESTIGATOR': 5, 'PRIVATEINV': 5, 'PRIV INV': 5, 'PI': 5, 'PRIVATE': 5,
+            'DET DIVERSIONS': 6, 'DETECTIVE DIVERSIONS': 6, 'DETDIVERSIONS': 6, 'DD': 6, 'DIVERSIONS': 6,
+            
+            // Ranger Classes (7-11)
+            'RANGER 1': 7, 'RANGER1': 7, 'R1': 7, 'RANGER I': 7,
+            'RANGER 2': 8, 'RANGER2': 8, 'R2': 8, 'RANGER II': 8,
+            'RANGER 3': 9, 'RANGER3': 9, 'R3': 9, 'RANGER III': 9,
+            'RANGER 4': 10, 'RANGER4': 10, 'R4': 10, 'RANGER IV': 10,
+            'RANGER 5': 11, 'RANGER5': 11, 'R5': 11, 'RANGER V': 11,
+            
+            // Dasher Classes (12-15)
+            'DASHER 3': 12, 'DASHER3': 12, 'DASH3': 12, 'DA3': 12, 'DASHER III': 12,
+            'DASHER 4': 13, 'DASHER4': 13, 'DASH4': 13, 'DA4': 13, 'DASHER IV': 13,
+            'DASHER 5': 14, 'DASHER5': 14, 'DASH5': 14, 'DA5': 14, 'DASHER V': 14,
+            'DASHER 6': 15, 'DASHER6': 15, 'DASH6': 15, 'DA6': 15, 'DASHER VI': 15,
+            
+            // Additional variations and common alternative names
+            'SCENT DETECTIVE': 2, 'SCENT INVESTIGATOR': 3, 'SCENT SLEUTH': 4,
+            'TRADITIONAL 1': 1, 'TRADITIONAL 2': 2, 'TRADITIONAL 3': 3, 'TRADITIONAL 4': 4,
+            'LEVEL 1': 1, 'LEVEL 2': 2, 'LEVEL 3': 3, 'LEVEL 4': 4, 'LEVEL 5': 5, 'LEVEL 6': 6
         };
 
         // ===== UTILITY FUNCTIONS =====
@@ -534,26 +544,89 @@
         function getCWAGSClassOrder(className) {
             if (!className) return 999;
             
+            // First, clean and normalize the class name
             const cleanClassName = className.toUpperCase()
                 .replace(/[^A-Z0-9\s]/g, '')
                 .replace(/\s+/g, ' ')
                 .trim();
             
+            console.log('🏷️ Ordering class:', className, '→', cleanClassName);
+            
+            // Direct match first
             if (CWAGS_CLASS_ORDER[cleanClassName]) {
+                console.log('✅ Direct match found:', cleanClassName, '→', CWAGS_CLASS_ORDER[cleanClassName]);
                 return CWAGS_CLASS_ORDER[cleanClassName];
             }
             
+            // Try without spaces
             const noSpaceClassName = cleanClassName.replace(/\s/g, '');
             if (CWAGS_CLASS_ORDER[noSpaceClassName]) {
+                console.log('✅ No-space match found:', noSpaceClassName, '→', CWAGS_CLASS_ORDER[noSpaceClassName]);
                 return CWAGS_CLASS_ORDER[noSpaceClassName];
             }
             
-            for (const code in CWAGS_CLASS_ORDER) {
+            // Partial matching for variations
+            for (const [code, order] of Object.entries(CWAGS_CLASS_ORDER)) {
                 if (cleanClassName.includes(code) || code.includes(cleanClassName)) {
-                    return CWAGS_CLASS_ORDER[code];
+                    console.log('✅ Partial match found:', cleanClassName, 'matches', code, '→', order);
+                    return order;
                 }
             }
             
+            // Special handling for common patterns
+            if (cleanClassName.includes('PATROL')) {
+                console.log('✅ Pattern match: PATROL → 1');
+                return 1;
+            }
+            if (cleanClassName.includes('DETECTIVE') && !cleanClassName.includes('DIVERSIONS')) {
+                console.log('✅ Pattern match: DETECTIVE → 2');
+                return 2;
+            }
+            if (cleanClassName.includes('INVESTIGATOR')) {
+                console.log('✅ Pattern match: INVESTIGATOR → 3');
+                return 3;
+            }
+            if (cleanClassName.includes('SLEUTH')) {
+                console.log('✅ Pattern match: SLEUTH → 4');
+                return 4;
+            }
+            if (cleanClassName.includes('PRIVATE')) {
+                console.log('✅ Pattern match: PRIVATE → 5');
+                return 5;
+            }
+            if (cleanClassName.includes('DIVERSIONS')) {
+                console.log('✅ Pattern match: DIVERSIONS → 6');
+                return 6;
+            }
+            if (cleanClassName.includes('RANGER')) {
+                // Extract number from ranger
+                const rangerMatch = cleanClassName.match(/RANGER\s*(\d+|[IVX]+)/);
+                if (rangerMatch) {
+                    const num = rangerMatch[1];
+                    if (num === '1' || num === 'I') return 7;
+                    if (num === '2' || num === 'II') return 8;
+                    if (num === '3' || num === 'III') return 9;
+                    if (num === '4' || num === 'IV') return 10;
+                    if (num === '5' || num === 'V') return 11;
+                }
+                console.log('✅ Pattern match: RANGER (default) → 7');
+                return 7;
+            }
+            if (cleanClassName.includes('DASHER')) {
+                // Extract number from dasher
+                const dasherMatch = cleanClassName.match(/DASHER\s*(\d+|[IVX]+)/);
+                if (dasherMatch) {
+                    const num = dasherMatch[1];
+                    if (num === '3' || num === 'III') return 12;
+                    if (num === '4' || num === 'IV') return 13;
+                    if (num === '5' || num === 'V') return 14;
+                    if (num === '6' || num === 'VI') return 15;
+                }
+                console.log('✅ Pattern match: DASHER (default) → 12');
+                return 12;
+            }
+            
+            console.log('⚠️ No match found for:', className, '→ using default order 999');
             return 999;
         }
 
@@ -897,8 +970,13 @@
                     const sortedClasses = Array.from(classNames).sort(function(a, b) {
                         const orderA = getCWAGSClassOrder(a);
                         const orderB = getCWAGSClassOrder(b);
+                        console.log('🔢 Sorting:', a, '(order:', orderA, ') vs', b, '(order:', orderB, ')');
                         return orderA - orderB;
                     });
+                    
+                    console.log('📋 Final sorted class order:', sortedClasses.map(className => 
+                        className + ' (order: ' + getCWAGSClassOrder(className) + ')'
+                    ));
                     
                     allClassNames = sortedClasses;
                     
