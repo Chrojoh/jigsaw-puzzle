@@ -1,4 +1,896 @@
-selectAllOption.style.backgroundColor = '#e9ecef';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Class Summary Sheet - Enhanced</title>
+    
+    <!-- Firebase SDKs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-app-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-auth-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-firestore-compat.min.js"></script>
+    
+    <!-- SheetJS for Excel export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <!-- JSZip for ZIP file creation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .controls {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+
+        .control-row {
+            display: flex;
+            gap: 1rem;
+            align-items: end;
+            margin-bottom: 1rem;
+        }
+
+        .control-group {
+            flex: 1;
+        }
+
+        .control-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #2c3e50;
+        }
+
+        .control-group select {
+            width: 100%;
+            padding: 0.8rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .btn {
+            padding: 0.8rem 1.5rem;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+            text-decoration: none;
+            display: inline-block;
+            white-space: nowrap;
+        }
+
+        .btn:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: #28a745;
+        }
+
+        .btn-warning {
+            background: #ffc107;
+            color: #212529;
+        }
+
+        .btn-info {
+            background: #17a2b8;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        .summary-container {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+            display: none;
+        }
+
+        .summary-header {
+            text-align: center;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 1rem;
+        }
+
+        .summary-title {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+        }
+
+        .summary-info {
+            color: #6c757d;
+            font-size: 1.1rem;
+        }
+
+        .debug-info {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            font-family: monospace;
+            font-size: 0.85rem;
+        }
+
+        .summary-table-container {
+            overflow-x: auto;
+            margin-bottom: 2rem;
+        }
+
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 800px;
+        }
+
+        .summary-table th,
+        .summary-table td {
+            border: 1px solid #dee2e6;
+            padding: 0.75rem 0.5rem;
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        .summary-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .participant-cwags {
+            text-align: left !important;
+            font-weight: 600;
+            background: #f0f8ff;
+            min-width: 120px;
+            max-width: 120px;
+            font-size: 0.85rem;
+            position: sticky;
+            left: 0;
+            z-index: 5;
+        }
+
+        .participant-dog {
+            text-align: left !important;
+            font-weight: 600;
+            background: #f0f8ff;
+            min-width: 100px;
+            max-width: 100px;
+            font-size: 0.9rem;
+            position: sticky;
+            left: 120px;
+            z-index: 5;
+        }
+
+        .participant-handler {
+            text-align: left !important;
+            font-weight: 600;
+            background: #f0f8ff;
+            min-width: 140px;
+            max-width: 140px;
+            font-size: 0.9rem;
+            position: sticky;
+            left: 220px;
+            z-index: 5;
+        }
+
+        .round-header {
+            min-width: 100px;
+            max-width: 120px;
+            font-size: 0.85rem;
+            line-height: 1.2;
+        }
+
+        .judge-name {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .round-date {
+            color: #6c757d;
+            font-size: 0.8rem;
+        }
+
+        .round-info {
+            color: #495057;
+            font-size: 0.8rem;
+        }
+
+        .result-cell {
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .result-pass {
+            color: #28a745;
+        }
+
+        .result-fail {
+            color: #dc3545;
+        }
+
+        .result-absent {
+            color: #6c757d;
+        }
+
+        .result-scheduled {
+            color: #007bff;
+        }
+
+        .stats-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 2px solid #e9ecef;
+        }
+
+        .stat-card {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            color: #6c757d;
+            font-size: 0.9rem;
+            margin-top: 0.25rem;
+        }
+
+        .status-message {
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status-info {
+            background: #cce7ff;
+            color: #0056b3;
+            border: 1px solid #99d3ff;
+        }
+
+        .no-data {
+            text-align: center;
+            color: #6c757d;
+            font-style: italic;
+            padding: 3rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .export-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .progress-container {
+            background: #e9ecef;
+            border-radius: 10px;
+            padding: 10px;
+            margin: 10px 0;
+            display: none;
+        }
+
+        .progress-bar {
+            background: #667eea;
+            height: 20px;
+            border-radius: 5px;
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.8rem;
+        }
+
+        @media (max-width: 768px) {
+            .control-row {
+                flex-direction: column;
+            }
+            
+            .export-buttons {
+                flex-direction: column;
+            }
+            
+            .summary-table {
+                font-size: 0.8rem;
+            }
+            
+            .participant-name {
+                min-width: 150px;
+                max-width: 150px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div>
+                <h1>📊 Class Summary Sheet</h1>
+                <p>Track competitor progress across all rounds of a class</p>
+            </div>
+            <div>
+                <a href="trial-secretary-dashboard.html" class="btn btn-secondary">← Back to Dashboard</a>
+            </div>
+        </div>
+
+        <!-- Status Message -->
+        <div class="status-message" id="statusMessage"></div>
+
+        <!-- Progress Container -->
+        <div class="progress-container" id="progressContainer">
+            <div>Processing classes...</div>
+            <div class="progress-bar" id="progressBar">0%</div>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+            <div class="control-row">
+                <div class="control-group">
+                    <label for="trialSelect">Select Trial:</label>
+                    <select id="trialSelect">
+                        <option value="">Loading trials...</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label for="classSelect">Select Class:</label>
+                    <select id="classSelect">
+                        <option value="">Select a trial first</option>
+                    </select>
+                </div>
+                <button class="btn" id="generateBtn">📋 Generate Summary</button>
+            </div>
+            <!-- Debug button for testing -->
+            <button id="forceReloadBtn" class="btn btn-info" style="margin-top: 10px;">🔄 Force Reload Trials</button>
+        </div>
+
+        <!-- Debug Info -->
+        <div class="debug-info" id="debugInfo" style="display: none;">
+            <strong>Debug Information:</strong>
+            <div id="debugContent"></div>
+        </div>
+
+        <!-- Summary Container -->
+        <div class="summary-container" id="summaryContainer">
+            <div class="summary-header">
+                <div class="summary-title" id="summaryTitle">Class Summary</div>
+                <div class="summary-info" id="summaryInfo">Trial • Class • Total Participants</div>
+            </div>
+
+            <div class="summary-table-container">
+                <table class="summary-table" id="summaryTable">
+                    <thead id="summaryTableHead">
+                        <!-- Table headers will be generated here -->
+                    </thead>
+                    <tbody id="summaryTableBody">
+                        <!-- Table body will be generated here -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="stats-section" id="statsSection">
+                <!-- Statistics will be generated here -->
+            </div>
+
+            <div class="export-buttons">
+                <button class="btn btn-success" id="exportCSVBtn">📄 Export CSV</button>
+                <button class="btn btn-info" id="exportExcelBtn">📊 Export Excel</button>
+                <button class="btn btn-warning" id="exportPDFBtn">📑 Export PDF</button>
+            </div>
+        </div>
+
+        <!-- No Data Message -->
+        <div class="no-data" id="noDataMessage" style="display: none;">
+            <h3>📋 No Data Available</h3>
+            <p>Please select a trial and class to generate the summary.</p>
+        </div>
+    </div>
+
+    <script>
+        console.log('🎯 Enhanced Script starting...');
+
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBWpyM_lEpqdQWuKuLLZiW1SlloWsWkJCs",
+            authDomain: "dog-trialing-system.firebaseapp.com",
+            projectId: "dog-trialing-system",
+            storageBucket: "dog-trialing-system.firebasestorage.app",
+            messagingSenderId: "490812593982",
+            appId: "1:490812593982:web:344776707566f8d9027e6f",
+            measurementId: "G-EMLX58Y278"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        console.log('🔥 Firebase initialized');
+
+        // ===== GLOBAL VARIABLES =====
+        let summaryData = null;
+        let currentTrial = null;
+        let currentClass = null;
+        let currentUser = null;
+        let allClassSummaries = {};
+        let allClassNames = [];
+        let entriesData = {};
+
+        // C-WAGS class order mapping
+        const CWAGS_CLASS_ORDER = {
+            'PATROL 1': 1, 'PATROL1': 1, 'P1': 1,
+            'DETECTIVE 2': 2, 'DETECTIVE2': 2, 'DET2': 2, 'D2': 2,
+            'INVESTIGATOR 3': 3, 'INVESTIGATOR3': 3, 'INV3': 3, 'I3': 3,
+            'SUPER SLEUTH 4': 4, 'SUPER SLEUTH4': 4, 'SUPERSLEUTH4': 4, 'SS4': 4, 'S4': 4,
+            'PRIVATE INV': 5, 'PRIVATE INVESTIGATOR': 5, 'PRIVATEINV': 5, 'PRIV INV': 5, 'PI': 5,
+            'DET DIVERSIONS': 6, 'DETECTIVE DIVERSIONS': 6, 'DETDIVERSIONS': 6, 'DD': 6,
+            'RANGER 1': 7, 'RANGER1': 7, 'R1': 7,
+            'RANGER 2': 8, 'RANGER2': 8, 'R2': 8,
+            'RANGER 3': 9, 'RANGER3': 9, 'R3': 9,
+            'RANGER 4': 10, 'RANGER4': 10, 'R4': 10,
+            'RANGER 5': 11, 'RANGER5': 11, 'R5': 11,
+            'DASHER 3': 12, 'DASHER3': 12, 'DASH3': 12, 'DA3': 12,
+            'DASHER 4': 13, 'DASHER4': 13, 'DASH4': 13, 'DA4': 13,
+            'DASHER 5': 14, 'DASHER5': 14, 'DASH5': 14, 'DA5': 14,
+            'DASHER 6': 15, 'DASHER6': 15, 'DASH6': 15, 'DA6': 15
+        };
+
+        // ===== UTILITY FUNCTIONS =====
+        function getDateFromFirebase(dateValue) {
+            if (!dateValue) return null;
+            if (dateValue.toDate) {
+                return dateValue.toDate().toISOString().split('T')[0];
+            }
+            if (typeof dateValue === 'string') {
+                return dateValue;
+            }
+            return null;
+        }
+
+        function getDateFromRound(round) {
+            if (!round.roundKey) return 'Date TBD';
+            const roundKeyParts = round.roundKey.split('-').map(Number);
+            const dayIndex = roundKeyParts[0];
+            const dayDate = currentTrial.days && currentTrial.days[dayIndex] 
+                ? getDateFromFirebase(currentTrial.days[dayIndex].date) 
+                : 'Date TBD';
+            return dayDate ? new Date(dayDate + 'T12:00:00').toLocaleDateString() : 'Date TBD';
+        }
+
+        function isFeoEntry(entryType) {
+            if (!entryType) return false;
+            const typeStr = entryType.toString().toLowerCase().trim();
+            return typeStr === 'feo' || typeStr === 'for exhibition only' || typeStr === 'exhibition';
+        }
+
+        function getCWAGSClassOrder(className) {
+            if (!className) return 999;
+            
+            const cleanClassName = className.toUpperCase()
+                .replace(/[^A-Z0-9\s]/g, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+            
+            if (CWAGS_CLASS_ORDER[cleanClassName]) {
+                return CWAGS_CLASS_ORDER[cleanClassName];
+            }
+            
+            const noSpaceClassName = cleanClassName.replace(/\s/g, '');
+            if (CWAGS_CLASS_ORDER[noSpaceClassName]) {
+                return CWAGS_CLASS_ORDER[noSpaceClassName];
+            }
+            
+            for (const code in CWAGS_CLASS_ORDER) {
+                if (cleanClassName.includes(code) || code.includes(cleanClassName)) {
+                    return CWAGS_CLASS_ORDER[code];
+                }
+            }
+            
+            return 999;
+        }
+
+        function createHeaderCell(text, className, rowspan) {
+            const cell = document.createElement('th');
+            cell.textContent = text;
+            if (className) {
+                cell.className = className;
+            }
+            if (rowspan && rowspan > 1) {
+                cell.rowSpan = rowspan;
+            }
+            return cell;
+        }
+
+        function createDataCell(content, className) {
+            const cell = document.createElement('td');
+            cell.textContent = content;
+            if (className) {
+                cell.className = className;
+            }
+            return cell;
+        }
+
+        function showStatus(message, type) {
+            console.log('Status (' + type + '): ' + message);
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.textContent = message;
+            statusDiv.className = 'status-message status-' + type;
+            statusDiv.style.display = 'block';
+            
+            setTimeout(function() {
+                statusDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        function showProgress(show, percent, message) {
+            percent = percent || 0;
+            message = message || '';
+            const container = document.getElementById('progressContainer');
+            const bar = document.getElementById('progressBar');
+            
+            if (show) {
+                container.style.display = 'block';
+                bar.style.width = percent + '%';
+                bar.textContent = percent + '% - ' + message;
+            } else {
+                container.style.display = 'none';
+            }
+        }
+
+        function showDebug(message) {
+            console.log('Debug:', message);
+            const debugDiv = document.getElementById('debugInfo');
+            const debugContent = document.getElementById('debugContent');
+            debugContent.innerHTML = message;
+            debugDiv.style.display = 'block';
+        }
+
+        function createLocalDate(dateStr) {
+            if (!dateStr) return null;
+            if (typeof dateStr === 'string') {
+                const dateWithTime = dateStr.includes('T') ? dateStr : dateStr + 'T12:00:00';
+                return new Date(dateWithTime);
+            }
+            return new Date(dateStr);
+        }
+
+        function formatLocalDate(date) {
+            if (!date || !(date instanceof Date)) return '';
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return year + '-' + month + '-' + day;
+        }
+
+        // ===== ENHANCED RESULT PROCESSING =====
+        function processParticipantResult(participantResult) {
+            // Check for enhanced numerical scoring (Rally, Games, Obedience)
+            if (participantResult.numericalScore !== undefined && participantResult.passIndicator !== undefined) {
+                console.log('📊 Found numerical score:', participantResult.numericalScore, 'Pass indicator:', participantResult.passIndicator);
+                
+                if (participantResult.passIndicator && participantResult.passIndicator.trim() !== '') {
+                    // Show actual pass indicator instead of just "P"
+                    return { result: participantResult.passIndicator, cssClass: 'result-pass' };
+                } else if (participantResult.numericalScore !== undefined && participantResult.numericalScore !== '') {
+                    return { result: 'F', cssClass: 'result-fail' };
+                }
+            }
+            
+            // Check for traditional scent work scoring
+            if (participantResult.passFail) {
+                if (participantResult.passFail === 'Pass') {
+                    return { result: 'P', cssClass: 'result-pass' };
+                } else if (participantResult.passFail === 'Fail') {
+                    return { result: 'F', cssClass: 'result-fail' };
+                }
+            }
+            
+            return { result: '-', cssClass: 'result-absent' };
+        }
+
+        // ===== FEO + ORPHANED SCORE DETECTION =====
+        function shouldExcludeParticipantEnhanced(participant, participantId) {
+            // First check for orphaned scores (deleted entries)
+            const docIdParts = participantId.split('_');
+            const docId = docIdParts[0];
+            const originalEntry = entriesData[docId];
+            
+            if (!originalEntry) {
+                console.log('🚫 ORPHANED SCORE detected (entry deleted): ' + participantId);
+                return true; // Skip orphaned scores from deleted entries
+            }
+
+            // Check multiple possible FEO indicators
+            if (participant.entryType && isFeoEntry(participant.entryType)) {
+                console.log('🚫 FEO detected via entryType: ' + participantId + ' (' + participant.entryType + ')');
+                return true;
+            }
+
+            if (participant.type && isFeoEntry(participant.type)) {
+                console.log('🚫 FEO detected via type: ' + participantId + ' (' + participant.type + ')');
+                return true;
+            }
+
+            if (participantId && participantId.toLowerCase().includes('feo')) {
+                console.log('🚫 FEO detected in participantId: ' + participantId);
+                return true;
+            }
+
+            if (participant.comments && participant.comments.toLowerCase().includes('feo')) {
+                console.log('🚫 FEO detected in comments: ' + participantId + ' (' + participant.comments + ')');
+                return true;
+            }
+
+            // Check original entries data for FEO status
+            if (originalEntry.selectedEntries) {
+                const parts = participantId.split('_');
+                if (parts.length > 1) {
+                    const entryDetails = parts[1];
+                    let parsedClassName = '';
+                    
+                    // Parse class name from entry details
+                    const classNames = [
+                        'Patrol 1', 'Detective 2', 'Investigator 3', 'Super Sleuth 4',
+                        'Private Inv', 'Det Diversions', 'Ranger 1', 'Ranger 2', 
+                        'Ranger 3', 'Ranger 4', 'Ranger 5', 'Dasher 3', 'Dasher 4', 
+                        'Dasher 5', 'Dasher 6'
+                    ];
+                    
+                    for (let i = 0; i < classNames.length; i++) {
+                        if (entryDetails.includes(classNames[i])) {
+                            parsedClassName = classNames[i];
+                            break;
+                        }
+                    }
+
+                    if (parsedClassName) {
+                        const matchingEntry = originalEntry.selectedEntries.find(function(se) {
+                            return se.className === parsedClassName;
+                        });
+                        if (matchingEntry && matchingEntry.type && isFeoEntry(matchingEntry.type)) {
+                            console.log('🚫 FEO detected via original entries: ' + participantId + ' (' + matchingEntry.type + ')');
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            return false;
+        }
+ // ===== INITIALIZATION FUNCTIONS =====
+        async function init() {
+            try {
+                console.log('🚀 Initializing enhanced application...');
+                
+                await new Promise(function(resolve, reject) {
+                    const unsubscribe = auth.onAuthStateChanged(async function(user) {
+                        unsubscribe();
+                        console.log('👤 Auth state changed:', user ? 'User found' : 'No user');
+                        
+                        if (user) {
+                            try {
+                                console.log('📋 Fetching user profile...');
+                                const userDoc = await db.collection('users').doc(user.uid).get();
+                                if (userDoc.exists) {
+                                    currentUser = { uid: user.uid, ...userDoc.data() };
+                                    console.log('✅ User profile loaded');
+                                    resolve();
+                                } else {
+                                    console.error('❌ User profile not found');
+                                    reject(new Error('User profile not found'));
+                                }
+                            } catch (error) {
+                                console.error('❌ Error fetching user profile:', error);
+                                reject(error);
+                            }
+                        } else {
+                            console.log('🔄 Redirecting to login...');
+                            window.location.href = 'index.html';
+                        }
+                    });
+                });
+
+                console.log('📊 Loading trials...');
+                await loadTrials();
+                console.log('✅ Enhanced application initialized successfully');
+                
+            } catch (error) {
+                console.error('❌ Error initializing:', error);
+                showStatus('Error initializing application: ' + error.message, 'error');
+            }
+        }
+
+        async function loadTrials() {
+            try {
+                console.log('🔍 Loading trials for user:', currentUser ? currentUser.uid : 'none');
+                showStatus('Loading your trials...', 'info');
+
+                const trialsSnapshot = await db.collection("trials")
+                    .where("createdBy", "==", currentUser.uid)
+                    .get();
+
+                console.log('📊 Found', trialsSnapshot.size, 'trials');
+
+                const trialSelect = document.getElementById('trialSelect');
+                trialSelect.innerHTML = '<option value="">Select a trial...</option>';
+
+                if (!trialsSnapshot.empty) {
+                    const trials = [];
+                    trialsSnapshot.forEach(function(doc) {
+                        trials.push({ id: doc.id, ...doc.data() });
+                    });
+
+                    trials.sort(function(a, b) {
+                        const aTime = a.createdAt ? a.createdAt.seconds : 0;
+                        const bTime = b.createdAt ? b.createdAt.seconds : 0;
+                        return bTime - aTime;
+                    });
+
+                    trials.forEach(function(trial) {
+                        const option = document.createElement('option');
+                        option.value = trial.id;
+                        
+                        let trialLabel = trial.clubName || 'Unnamed Trial';
+                        
+                        if (trial.days && trial.days.length > 0) {
+                            const dates = trial.days
+                                .filter(function(day) { return day.date; })
+                                .map(function(day) {
+                                    const localDate = createLocalDate(day.date);
+                                    return localDate.toLocaleDateString('en-US', { 
+                                        month: 'short', 
+                                        day: 'numeric',
+                                        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+                                    });
+                                })
+                                .join(', ');
+                            if (dates) {
+                                trialLabel += ' (' + dates + ')';
+                            }
+                        }
+                        
+                        option.textContent = trialLabel;
+                        trialSelect.appendChild(option);
+                    });
+
+                    showStatus('Found ' + trials.length + ' trials', 'success');
+                    console.log('✅ Trials loaded successfully');
+                } else {
+                    showStatus('No trials found', 'error');
+                    console.log('⚠️ No trials found for user');
+                }
+            } catch (error) {
+                console.error('❌ Error loading trials:', error);
+                showStatus('Error loading trials: ' + error.message, 'error');
+            }
+        }
+
+        async function loadTrialClasses() {
+            const trialId = document.getElementById('trialSelect').value;
+            const classSelect = document.getElementById('classSelect');
+            
+            if (!trialId) {
+                classSelect.innerHTML = '<option value="">Select a trial first</option>';
+                document.getElementById('summaryContainer').style.display = 'none';
+                allClassNames = [];
+                return;
+            }
+
+            try {
+                console.log('🔍 Loading classes for trial:', trialId);
+                showStatus('Loading trial classes...', 'info');
+
+                const trialDoc = await db.collection('trials').doc(trialId).get();
+                if (!trialDoc.exists) {
+                    throw new Error('Trial not found');
+                }
+
+                currentTrial = { id: trialDoc.id, ...trialDoc.data() };
+                console.log('📋 Trial loaded:', currentTrial.clubName);
+
+                // Load entries data for FEO detection
+                console.log('📂 Loading entries data for FEO checking...');
+                const entriesSnapshot = await db.collection('entries')
+                    .where('trialId', '==', trialId)
+                    .get();
+
+                entriesData = {};
+                entriesSnapshot.forEach(function(doc) {
+                    entriesData[doc.id] = doc.data();
+                });
+                console.log('📊 Loaded ' + Object.keys(entriesData).length + ' entry documents');
+
+                const classNames = new Set();
+                
+                if (currentTrial.days && Array.isArray(currentTrial.days)) {
+                    currentTrial.days.forEach(function(day) {
+                        if (day.classes && Array.isArray(day.classes)) {
+                            day.classes.forEach(function(cls) {
+                                const className = cls.className || cls.class || cls.CLASS_NAME;
+                                if (className) {
+                                    classNames.add(className.trim());
+                                }
+                            });
+                        }
+                    });
+                }
+
+                classSelect.innerHTML = '<option value="">Select a class...</option>';
+                
+                if (classNames.size > 0) {
+                    const selectAllOption = document.createElement('option');
+                    selectAllOption.value = 'ALL_CLASSES';
+                    selectAllOption.textContent = '📊 Select All Classes';
+                    selectAllOption.style.fontWeight = 'bold';
+                   selectAllOption.style.backgroundColor = '#e9ecef';
                     classSelect.appendChild(selectAllOption);
                     
                     const sortedClasses = Array.from(classNames).sort(function(a, b) {
@@ -1036,818 +1928,4 @@ selectAllOption.style.backgroundColor = '#e9ecef';
 
     </script>
 </body>
-</html><!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Class Summary Sheet - Enhanced</title>
-    
-    <!-- Firebase SDKs -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-app-compat.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-auth-compat.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-firestore-compat.min.js"></script>
-    
-    <!-- SheetJS for Excel export -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    
-    <!-- JSZip for ZIP file creation -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 1600px;
-            margin: 0 auto;
-        }
-
-        .header {
-            background: white;
-            padding: 1.5rem;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            margin-bottom: 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .controls {
-            background: white;
-            border-radius: 15px;
-            padding: 2rem;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            margin-bottom: 2rem;
-        }
-
-        .control-row {
-            display: flex;
-            gap: 1rem;
-            align-items: end;
-            margin-bottom: 1rem;
-        }
-
-        .control-group {
-            flex: 1;
-        }
-
-        .control-group label {
-            display: block;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            color: #2c3e50;
-        }
-
-        .control-group select {
-            width: 100%;
-            padding: 0.8rem;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 1rem;
-        }
-
-        .btn {
-            padding: 0.8rem 1.5rem;
-            background: #667eea;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 0.9rem;
-            text-decoration: none;
-            display: inline-block;
-            white-space: nowrap;
-        }
-
-        .btn:hover {
-            background: #5a67d8;
-            transform: translateY(-2px);
-        }
-
-        .btn-success { background: #28a745; }
-        .btn-warning { background: #ffc107; color: #212529; }
-        .btn-info { background: #17a2b8; }
-        .btn-secondary { background: #6c757d; }
-
-        .summary-container {
-            background: white;
-            border-radius: 15px;
-            padding: 2rem;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            margin-bottom: 2rem;
-            display: none;
-        }
-
-        .summary-header {
-            text-align: center;
-            margin-bottom: 2rem;
-            border-bottom: 2px solid #e9ecef;
-            padding-bottom: 1rem;
-        }
-
-        .summary-title {
-            font-size: 1.8rem;
-            font-weight: bold;
-            color: #2c3e50;
-            margin-bottom: 0.5rem;
-        }
-
-        .summary-info {
-            color: #6c757d;
-            font-size: 1.1rem;
-        }
-
-        .debug-info {
-            background: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 8px;
-            padding: 1rem;
-            margin: 1rem 0;
-            font-family: monospace;
-            font-size: 0.85rem;
-        }
-
-        .summary-table-container {
-            overflow-x: auto;
-            margin-bottom: 2rem;
-        }
-
-        .summary-table {
-            width: 100%;
-            border-collapse: collapse;
-            min-width: 800px;
-        }
-
-        .summary-table th,
-        .summary-table td {
-            border: 1px solid #dee2e6;
-            padding: 0.75rem 0.5rem;
-            text-align: center;
-            vertical-align: middle;
-        }
-
-        .summary-table th {
-            background: #f8f9fa;
-            font-weight: 600;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
-
-        .participant-cwags {
-            text-align: left !important;
-            font-weight: 600;
-            background: #f0f8ff;
-            min-width: 120px;
-            max-width: 120px;
-            font-size: 0.85rem;
-            position: sticky;
-            left: 0;
-            z-index: 5;
-        }
-
-        .participant-dog {
-            text-align: left !important;
-            font-weight: 600;
-            background: #f0f8ff;
-            min-width: 100px;
-            max-width: 100px;
-            font-size: 0.9rem;
-            position: sticky;
-            left: 120px;
-            z-index: 5;
-        }
-
-        .participant-handler {
-            text-align: left !important;
-            font-weight: 600;
-            background: #f0f8ff;
-            min-width: 140px;
-            max-width: 140px;
-            font-size: 0.9rem;
-            position: sticky;
-            left: 220px;
-            z-index: 5;
-        }
-
-        .round-header {
-            min-width: 100px;
-            max-width: 120px;
-            font-size: 0.85rem;
-            line-height: 1.2;
-        }
-
-        .judge-name {
-            font-weight: bold;
-            color: #2c3e50;
-        }
-
-        .round-date {
-            color: #6c757d;
-            font-size: 0.8rem;
-        }
-
-        .round-info {
-            color: #495057;
-            font-size: 0.8rem;
-        }
-
-        .result-cell {
-            font-weight: bold;
-            font-size: 1.1rem;
-        }
-
-        .result-pass { color: #28a745; }
-        .result-fail { color: #dc3545; }
-        .result-absent { color: #6c757d; }
-        .result-scheduled { color: #007bff; }
-
-        .stats-section {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            margin-top: 2rem;
-            padding-top: 2rem;
-            border-top: 2px solid #e9ecef;
-        }
-
-        .stat-card {
-            background: #f8f9fa;
-            padding: 1rem;
-            border-radius: 8px;
-            text-align: center;
-        }
-
-        .stat-value {
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: #667eea;
-        }
-
-        .stat-label {
-            color: #6c757d;
-            font-size: 0.9rem;
-            margin-top: 0.25rem;
-        }
-
-        .status-message {
-            padding: 1rem;
-            margin: 1rem 0;
-            border-radius: 8px;
-            display: none;
-        }
-
-        .status-success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-
-        .status-error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-
-        .status-info {
-            background: #cce7ff;
-            color: #0056b3;
-            border: 1px solid #99d3ff;
-        }
-
-        .no-data {
-            text-align: center;
-            color: #6c757d;
-            font-style: italic;
-            padding: 3rem;
-            background: #f8f9fa;
-            border-radius: 8px;
-        }
-
-        .export-buttons {
-            display: flex;
-            gap: 1rem;
-            justify-content: center;
-            margin-top: 2rem;
-            flex-wrap: wrap;
-        }
-
-        .progress-container {
-            background: #e9ecef;
-            border-radius: 10px;
-            padding: 10px;
-            margin: 10px 0;
-            display: none;
-        }
-
-        .progress-bar {
-            background: #667eea;
-            height: 20px;
-            border-radius: 5px;
-            transition: width 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 0.8rem;
-        }
-
-        @media (max-width: 768px) {
-            .control-row {
-                flex-direction: column;
-            }
-            
-            .export-buttons {
-                flex-direction: column;
-            }
-            
-            .summary-table {
-                font-size: 0.8rem;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <!-- Header -->
-        <div class="header">
-            <div>
-                <h1>📊 Class Summary Sheet</h1>
-                <p>Track competitor progress across all rounds of a class</p>
-            </div>
-            <div>
-                <a href="trial-secretary-dashboard.html" class="btn btn-secondary">← Back to Dashboard</a>
-            </div>
-        </div>
-
-        <!-- Status Message -->
-        <div class="status-message" id="statusMessage"></div>
-
-        <!-- Progress Container -->
-        <div class="progress-container" id="progressContainer">
-            <div>Processing classes...</div>
-            <div class="progress-bar" id="progressBar">0%</div>
-        </div>
-
-        <!-- Controls -->
-        <div class="controls">
-            <div class="control-row">
-                <div class="control-group">
-                    <label for="trialSelect">Select Trial:</label>
-                    <select id="trialSelect">
-                        <option value="">Loading trials...</option>
-                    </select>
-                </div>
-                <div class="control-group">
-                    <label for="classSelect">Select Class:</label>
-                    <select id="classSelect">
-                        <option value="">Select a trial first</option>
-                    </select>
-                </div>
-                <button class="btn" id="generateBtn">📋 Generate Summary</button>
-            </div>
-            <button id="forceReloadBtn" class="btn btn-info" style="margin-top: 10px;">🔄 Force Reload Trials</button>
-        </div>
-
-        <!-- Debug Info -->
-        <div class="debug-info" id="debugInfo" style="display: none;">
-            <strong>Debug Information:</strong>
-            <div id="debugContent"></div>
-        </div>
-
-        <!-- Summary Container -->
-        <div class="summary-container" id="summaryContainer">
-            <div class="summary-header">
-                <div class="summary-title" id="summaryTitle">Class Summary</div>
-                <div class="summary-info" id="summaryInfo">Trial • Class • Total Participants</div>
-            </div>
-
-            <div class="summary-table-container">
-                <table class="summary-table" id="summaryTable">
-                    <thead id="summaryTableHead">
-                        <!-- Table headers will be generated here -->
-                    </thead>
-                    <tbody id="summaryTableBody">
-                        <!-- Table body will be generated here -->
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="stats-section" id="statsSection">
-                <!-- Statistics will be generated here -->
-            </div>
-
-            <div class="export-buttons">
-                <button class="btn btn-success" id="exportCSVBtn">📄 Export CSV</button>
-                <button class="btn btn-info" id="exportExcelBtn">📊 Export Excel</button>
-                <button class="btn btn-warning" id="exportPDFBtn">📑 Export PDF</button>
-            </div>
-        </div>
-
-        <!-- No Data Message -->
-        <div class="no-data" id="noDataMessage" style="display: none;">
-            <h3>📋 No Data Available</h3>
-            <p>Please select a trial and class to generate the summary.</p>
-        </div>
-    </div>
-
-    <script>
-        console.log('🎯 Enhanced Class Summary Sheet starting...');
-
-        // ===== FIREBASE CONFIGURATION =====
-        const firebaseConfig = {
-            apiKey: "AIzaSyBWpyM_lEpqdQWuKuLLZiW1SlloWsWkJCs",
-            authDomain: "dog-trialing-system.firebaseapp.com",
-            projectId: "dog-trialing-system",
-            storageBucket: "dog-trialing-system.firebasestorage.app",
-            messagingSenderId: "490812593982",
-            appId: "1:490812593982:web:344776707566f8d9027e6f",
-            measurementId: "G-EMLX58Y278"
-        };
-
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const db = firebase.firestore();
-        console.log('🔥 Firebase initialized');
-
-        // ===== GLOBAL VARIABLES =====
-        let summaryData = null;
-        let currentTrial = null;
-        let currentClass = null;
-        let currentUser = null;
-        let allClassSummaries = {};
-        let allClassNames = [];
-        let entriesData = {};
-
-        // C-WAGS class order mapping
-        const CWAGS_CLASS_ORDER = {
-            'PATROL 1': 1, 'PATROL1': 1, 'P1': 1,
-            'DETECTIVE 2': 2, 'DETECTIVE2': 2, 'DET2': 2, 'D2': 2,
-            'INVESTIGATOR 3': 3, 'INVESTIGATOR3': 3, 'INV3': 3, 'I3': 3,
-            'SUPER SLEUTH 4': 4, 'SUPER SLEUTH4': 4, 'SUPERSLEUTH4': 4, 'SS4': 4, 'S4': 4,
-            'PRIVATE INV': 5, 'PRIVATE INVESTIGATOR': 5, 'PRIVATEINV': 5, 'PRIV INV': 5, 'PI': 5,
-            'DET DIVERSIONS': 6, 'DETECTIVE DIVERSIONS': 6, 'DETDIVERSIONS': 6, 'DD': 6,
-            'RANGER 1': 7, 'RANGER1': 7, 'R1': 7,
-            'RANGER 2': 8, 'RANGER2': 8, 'R2': 8,
-            'RANGER 3': 9, 'RANGER3': 9, 'R3': 9,
-            'RANGER 4': 10, 'RANGER4': 10, 'R4': 10,
-            'RANGER 5': 11, 'RANGER5': 11, 'R5': 11,
-            'DASHER 3': 12, 'DASHER3': 12, 'DASH3': 12, 'DA3': 12,
-            'DASHER 4': 13, 'DASHER4': 13, 'DASH4': 13, 'DA4': 13,
-            'DASHER 5': 14, 'DASHER5': 14, 'DASH5': 14, 'DA5': 14,
-            'DASHER 6': 15, 'DASHER6': 15, 'DASH6': 15, 'DA6': 15
-        };
-
-        // ===== UTILITY FUNCTIONS =====
-        function getDateFromFirebase(dateValue) {
-            if (!dateValue) return null;
-            if (dateValue.toDate) {
-                return dateValue.toDate().toISOString().split('T')[0];
-            }
-            if (typeof dateValue === 'string') {
-                return dateValue;
-            }
-            return null;
-        }
-
-        function getDateFromRound(round) {
-            if (!round.roundKey) return 'Date TBD';
-            const parts = round.roundKey.split('-').map(Number);
-            const dayIndex = parts[0];
-            const dayDate = currentTrial.days && currentTrial.days[dayIndex] 
-                ? getDateFromFirebase(currentTrial.days[dayIndex].date) 
-                : 'Date TBD';
-            return dayDate ? new Date(dayDate + 'T12:00:00').toLocaleDateString() : 'Date TBD';
-        }
-
-        function isFeoEntry(entryType) {
-            if (!entryType) return false;
-            const typeStr = entryType.toString().toLowerCase().trim();
-            return typeStr === 'feo' || typeStr === 'for exhibition only' || typeStr === 'exhibition';
-        }
-
-        function getCWAGSClassOrder(className) {
-            if (!className) return 999;
-            
-            const cleanClassName = className.toUpperCase()
-                .replace(/[^A-Z0-9\s]/g, '')
-                .replace(/\s+/g, ' ')
-                .trim();
-            
-            if (CWAGS_CLASS_ORDER[cleanClassName]) {
-                return CWAGS_CLASS_ORDER[cleanClassName];
-            }
-            
-            const noSpaceClassName = cleanClassName.replace(/\s/g, '');
-            if (CWAGS_CLASS_ORDER[noSpaceClassName]) {
-                return CWAGS_CLASS_ORDER[noSpaceClassName];
-            }
-            
-            for (const code in CWAGS_CLASS_ORDER) {
-                if (cleanClassName.includes(code) || code.includes(cleanClassName)) {
-                    return CWAGS_CLASS_ORDER[code];
-                }
-            }
-            
-            return 999;
-        }
-
-        function createHeaderCell(text, className, rowspan) {
-            const cell = document.createElement('th');
-            cell.textContent = text;
-            if (className) cell.className = className;
-            if (rowspan && rowspan > 1) cell.rowSpan = rowspan;
-            return cell;
-        }
-
-        function createDataCell(content, className) {
-            const cell = document.createElement('td');
-            cell.textContent = content;
-            if (className) cell.className = className;
-            return cell;
-        }
-
-        function showStatus(message, type) {
-            console.log('Status (' + type + '): ' + message);
-            const statusDiv = document.getElementById('statusMessage');
-            statusDiv.textContent = message;
-            statusDiv.className = 'status-message status-' + type;
-            statusDiv.style.display = 'block';
-            
-            setTimeout(function() {
-                statusDiv.style.display = 'none';
-            }, 5000);
-        }
-
-        function showProgress(show, percent, message) {
-            percent = percent || 0;
-            message = message || '';
-            const container = document.getElementById('progressContainer');
-            const bar = document.getElementById('progressBar');
-            
-            if (show) {
-                container.style.display = 'block';
-                bar.style.width = percent + '%';
-                bar.textContent = percent + '% - ' + message;
-            } else {
-                container.style.display = 'none';
-            }
-        }
-
-        function showDebug(message) {
-            console.log('Debug:', message);
-            const debugDiv = document.getElementById('debugInfo');
-            const debugContent = document.getElementById('debugContent');
-            debugContent.innerHTML = message;
-            debugDiv.style.display = 'block';
-        }
-
-        function createLocalDate(dateStr) {
-            if (!dateStr) return null;
-            if (typeof dateStr === 'string') {
-                const dateWithTime = dateStr.includes('T') ? dateStr : dateStr + 'T12:00:00';
-                return new Date(dateWithTime);
-            }
-            return new Date(dateStr);
-        }
-
-        // ===== ENHANCED RESULT PROCESSING =====
-        function processParticipantResult(participantResult) {
-            // Check for enhanced numerical scoring (Rally, Games, Obedience)
-            if (participantResult.numericalScore !== undefined && participantResult.passIndicator !== undefined) {
-                console.log('📊 Found numerical score:', participantResult.numericalScore, 'Pass indicator:', participantResult.passIndicator);
-                
-                if (participantResult.passIndicator && participantResult.passIndicator.trim() !== '') {
-                    // Show actual pass indicator instead of just "P"
-                    return { result: participantResult.passIndicator, cssClass: 'result-pass' };
-                } else if (participantResult.numericalScore !== undefined && participantResult.numericalScore !== '') {
-                    return { result: 'F', cssClass: 'result-fail' };
-                }
-            }
-            
-            // Check for traditional scent work scoring
-            if (participantResult.passFail) {
-                if (participantResult.passFail === 'Pass') {
-                    return { result: 'P', cssClass: 'result-pass' };
-                } else if (participantResult.passFail === 'Fail') {
-                    return { result: 'F', cssClass: 'result-fail' };
-                }
-            }
-            
-            return { result: '-', cssClass: 'result-absent' };
-        }
-
-        // ===== FEO + ORPHANED SCORE DETECTION =====
-        function shouldExcludeParticipantEnhanced(participant, participantId) {
-            // Check for orphaned scores (deleted entries)
-            const docId = participantId.split('_')[0];
-            const originalEntry = entriesData[docId];
-            
-            if (!originalEntry) {
-                console.log('🚫 ORPHANED SCORE detected (entry deleted): ' + participantId);
-                return true;
-            }
-
-            // Check multiple possible FEO indicators
-            if (participant.entryType && isFeoEntry(participant.entryType)) {
-                console.log('🚫 FEO detected via entryType: ' + participantId + ' (' + participant.entryType + ')');
-                return true;
-            }
-
-            if (participant.type && isFeoEntry(participant.type)) {
-                console.log('🚫 FEO detected via type: ' + participantId + ' (' + participant.type + ')');
-                return true;
-            }
-
-            if (participantId && participantId.toLowerCase().includes('feo')) {
-                console.log('🚫 FEO detected in participantId: ' + participantId);
-                return true;
-            }
-
-            if (participant.comments && participant.comments.toLowerCase().includes('feo')) {
-                console.log('🚫 FEO detected in comments: ' + participantId + ' (' + participant.comments + ')');
-                return true;
-            }
-
-            return false;
-        }
-
-        // ===== INITIALIZATION FUNCTIONS =====
-        async function init() {
-            try {
-                console.log('🚀 Initializing enhanced application...');
-                
-                await new Promise(function(resolve, reject) {
-                    const unsubscribe = auth.onAuthStateChanged(async function(user) {
-                        unsubscribe();
-                        console.log('👤 Auth state changed:', user ? 'User found' : 'No user');
-                        
-                        if (user) {
-                            try {
-                                console.log('📋 Fetching user profile...');
-                                const userDoc = await db.collection('users').doc(user.uid).get();
-                                if (userDoc.exists) {
-                                    currentUser = { uid: user.uid, ...userDoc.data() };
-                                    console.log('✅ User profile loaded');
-                                    resolve();
-                                } else {
-                                    console.error('❌ User profile not found');
-                                    reject(new Error('User profile not found'));
-                                }
-                            } catch (error) {
-                                console.error('❌ Error fetching user profile:', error);
-                                reject(error);
-                            }
-                        } else {
-                            console.log('🔄 Redirecting to login...');
-                            window.location.href = 'index.html';
-                        }
-                    });
-                });
-
-                console.log('📊 Loading trials...');
-                await loadTrials();
-                console.log('✅ Enhanced application initialized successfully');
-                
-            } catch (error) {
-                console.error('❌ Error initializing:', error);
-                showStatus('Error initializing application: ' + error.message, 'error');
-            }
-        }
-
-        async function loadTrials() {
-            try {
-                console.log('🔍 Loading trials for user:', currentUser ? currentUser.uid : 'none');
-                showStatus('Loading your trials...', 'info');
-
-                const trialsSnapshot = await db.collection("trials")
-                    .where("createdBy", "==", currentUser.uid)
-                    .get();
-
-                console.log('📊 Found', trialsSnapshot.size, 'trials');
-
-                const trialSelect = document.getElementById('trialSelect');
-                trialSelect.innerHTML = '<option value="">Select a trial...</option>';
-
-                if (!trialsSnapshot.empty) {
-                    const trials = [];
-                    trialsSnapshot.forEach(function(doc) {
-                        trials.push({ id: doc.id, ...doc.data() });
-                    });
-
-                    trials.sort(function(a, b) {
-                        const aTime = a.createdAt ? a.createdAt.seconds : 0;
-                        const bTime = b.createdAt ? b.createdAt.seconds : 0;
-                        return bTime - aTime;
-                    });
-
-                    trials.forEach(function(trial) {
-                        const option = document.createElement('option');
-                        option.value = trial.id;
-                        
-                        let trialLabel = trial.clubName || 'Unnamed Trial';
-                        
-                        if (trial.days && trial.days.length > 0) {
-                            const dates = trial.days
-                                .filter(function(day) { return day.date; })
-                                .map(function(day) {
-                                    const localDate = createLocalDate(day.date);
-                                    return localDate.toLocaleDateString('en-US', { 
-                                        month: 'short', 
-                                        day: 'numeric',
-                                        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
-                                    });
-                                })
-                                .join(', ');
-                            if (dates) {
-                                trialLabel += ' (' + dates + ')';
-                            }
-                        }
-                        
-                        option.textContent = trialLabel;
-                        trialSelect.appendChild(option);
-                    });
-
-                    showStatus('Found ' + trials.length + ' trials', 'success');
-                    console.log('✅ Trials loaded successfully');
-                } else {
-                    showStatus('No trials found', 'error');
-                    console.log('⚠️ No trials found for user');
-                }
-            } catch (error) {
-                console.error('❌ Error loading trials:', error);
-                showStatus('Error loading trials: ' + error.message, 'error');
-            }
-        }
-
-        async function loadTrialClasses() {
-            const trialId = document.getElementById('trialSelect').value;
-            const classSelect = document.getElementById('classSelect');
-            
-            if (!trialId) {
-                classSelect.innerHTML = '<option value="">Select a trial first</option>';
-                document.getElementById('summaryContainer').style.display = 'none';
-                allClassNames = [];
-                return;
-            }
-
-            try {
-                console.log('🔍 Loading classes for trial:', trialId);
-                showStatus('Loading trial classes...', 'info');
-
-                const trialDoc = await db.collection('trials').doc(trialId).get();
-                if (!trialDoc.exists) {
-                    throw new Error('Trial not found');
-                }
-
-                currentTrial = { id: trialDoc.id, ...trialDoc.data() };
-                console.log('📋 Trial loaded:', currentTrial.clubName);
-
-                // Load entries data for FEO detection
-                console.log('📂 Loading entries data for FEO checking...');
-                const entriesSnapshot = await db.collection('entries')
-                    .where('trialId', '==', trialId)
-                    .get();
-
-                entriesData = {};
-                entriesSnapshot.forEach(function(doc) {
-                    entriesData[doc.id] = doc.data();
-                });
-                console.log('📊 Loaded ' + Object.keys(entriesData).length + ' entry documents');
-
-                const classNames = new Set();
-                
-                if (currentTrial.days && Array.isArray(currentTrial.days)) {
-                    currentTrial.days.forEach(function(day) {
-                        if (day.classes && Array.isArray(day.classes)) {
-                            day.classes.forEach(function(cls) {
-                                const className = cls.className || cls.class || cls.CLASS_NAME;
-                                if (className) {
-                                    classNames.add(className.trim());
-                                }
-                            });
-                        }
-                    });
-                }
-
-                classSelect.innerHTML = '<option value="">Select a class...</option>';
-                
-                if (classNames.size > 0) {
-                    const selectAllOption = document.createElement('option');
-                    selectAllOption.value = 'ALL_CLASSES';
-                    selectAllOption.textContent = '📊 Select All Classes';
-                    selectAllOption.style.fontWeight = 'bold';
-                    selectAllOption.style.
+</html>
