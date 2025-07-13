@@ -2123,7 +2123,35 @@ if (classData.rounds && Array.isArray(classData.rounds)) {
 
 
         console.log('✅ Enhanced Class Summary Sheet with FEO + Orphaned Score filtering loaded successfully');
+            
+function getClassTypeColor(classType) {
+    switch(classType) {
+        case 'rally': return '#17a2b8';
+        case 'games': return '#ffc107';
+        case 'obedience1':
+        case 'obedience2':
+        case 'obedience3':
+        case 'obedience4':
+        case 'obedience5': return '#28a745';
+        case 'scent': return '#6f42c1';
+        default: return '#6c757d';
+    }
+}
 
+function getClassTypeDisplay(classType) {
+    switch(classType) {
+        case 'rally': return '🏃 Rally';
+        case 'games': return '🎯 Games';
+        case 'obedience1':
+        case 'obedience2':
+        case 'obedience3':
+        case 'obedience4':
+        case 'obedience5': return '🐕 Obedience';
+        case 'scent': return '👃 Scent Work';
+        default: return '❓ Unknown';
+    }
+}
+            
     </script>
 </body>
 </html>
