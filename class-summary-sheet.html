@@ -914,80 +914,157 @@
         async function generateSummaryForClass(className) {
             console.log(`🎯 Enhanced: Processing class: "${className}"`);
             
-            const classType = detectClassType(className);
-            console.log(`Detected class type: ${classType} for "${className}"`);
-            
             try {
-                // Method 1: Try to find scores by roundInfo.className
+                // Get trial ID for data queries
+                const currentTrialId = document.getElementById('trialSelect').value;
+                
+                // First, try to build the full summary with participants and rounds from running orders
+                const orderDoc = await db.collection('running_orders').doc(currentTrialId).get();
+                
+                if (!orderDoc.exists()) {
+                    console.log(`No running orders found for trial ${currentTrialId}`);
+                    return await generateOriginalSummary(className);
+                }
+
+                const orderData = orderDoc.data();
+                const rounds = orderData.finalizedRunningOrders || orderData.generatedSheets || orderData.roundOrders || {};
+                
+                // Build participants list from running orders
+                const participantsMap = new Map();
+                const roundsData = [];
+                
+                Object.entries(rounds).forEach(([roundKey, roundData]) => {
+                    if (roundData.participants) {
+                        const classParticipants = roundData.participants.filter(participant => {
+                            const participantId = typeof participant === 'string' ? participant : participant.id;
+                            return participantId && participantId.includes(className);
+                        });
+                        
+                        if (classParticipants.length > 0) {
+                            // Create round data structure
+                            const roundInfo = {
+                                roundKey: roundKey,
+                                className: className,
+                                judgeName: roundData.judgeName || 'Judge TBD',
+                                participants: {},
+                                hasScores: false
+                            };
+                            
+                            // Add participants to the round and to our participants map
+                            classParticipants.forEach(participant => {
+                                const participantId = typeof participant === 'string' ? participant : participant.id;
+                                const [docId] = participantId.split('_');
+                                
+                                // Skip if this is an orphaned score (entry deleted)
+                                if (!entriesData[docId]) {
+                                    console.log(`🚫 Skipping orphaned participant: ${participantId}`);
+                                    return;
+                                }
+                                
+                                // Extract participant details from ID
+                                const parts = participantId.split('_');
+                                if (parts.length > 1) {
+                                    const entryDetails = parts[1];
+                                    const dogMatch = entryDetails.match(/Dog:([^,]+)/);
+                                    const handlerMatch = entryDetails.match(/Handler:([^,]+)/);
+                                    const cwagsMatch = entryDetails.match(/CWAGS:([^,]+)/);
+                                    
+                                    const participantInfo = {
+                                        id: docId,
+                                        dogName: dogMatch ? dogMatch[1].trim() : 'Unknown',
+                                        handlerName: handlerMatch ? handlerMatch[1].trim() : 'Unknown Handler',
+                                        cwagsNumber: cwagsMatch ? cwagsMatch[1].trim() : 'TBD',
+                                        participantIds: [participantId]
+                                    };
+                                    
+                                    // Check for FEO status
+                                    const originalEntry = entriesData[docId];
+                                    let isFeo = false;
+                                    if (originalEntry && originalEntry.selectedEntries) {
+                                        const matchingEntry = originalEntry.selectedEntries.find(se => 
+                                            se.className === className
+                                        );
+                                        if (matchingEntry && matchingEntry.type && isFeoEntry(matchingEntry.type)) {
+                                            isFeo = true;
+                                        }
+                                    }
+                                    
+                                    if (!isFeo) {
+                                        participantsMap.set(docId, participantInfo);
+                                        roundInfo.participants[participantId] = { passFail: null }; // Placeholder for scores
+                                    }
+                                }
+                            });
+                            
+                            if (Object.keys(roundInfo.participants).length > 0) {
+                                roundsData.push(roundInfo);
+                            }
+                        }
+                    }
+                });
+                
+                // Now try to load scores for this class
+                console.log(`📊 Looking for scores for ${className}...`);
+                
+                // Method 1: Try roundInfo.className
                 let scoresSnapshot = await db.collection('scores')
                     .where('roundInfo.className', '==', className)
                     .get();
                 
-                let allParticipants = [];
-                let hasNumericalScores = false;
-                
-                // Method 2: If no scores found, search all documents for this trial
+                // Method 2: Search all score documents for this trial
                 if (scoresSnapshot.empty) {
-                    console.log(`No scores found via roundInfo for ${className}, searching all documents...`);
-                    
-                    const currentTrialId = document.getElementById('trialSelect').value;
+                    console.log(`No scores found via roundInfo, searching all documents...`);
                     const allScoresSnapshot = await db.collection('scores').get();
                     
                     allScoresSnapshot.forEach(doc => {
                         const data = doc.data();
                         const docId = doc.id;
                         
-                        // Check if this document belongs to current trial and contains our class
                         if (docId.startsWith(currentTrialId) && data.participants) {
-                            Object.keys(data.participants).forEach(participantId => {
-                                if (participantId.includes(className)) {
-                                    const scores = data.participants[participantId];
-                                    
-                                    // Handle numerical scores (Games, Rally, Obedience)
-                                    if (scores.numericalScore !== undefined) {
-                                        hasNumericalScores = true;
-                                        allParticipants.push({
-                                            id: participantId,
-                                            score: parseInt(scores.numericalScore) || 0,
-                                            passed: scores.passIndicator && scores.passIndicator.trim() !== '',
-                                            passIndicator: scores.passIndicator || '',
-                                            entryType: scores.entryType || 'regular'
-                                        });
-                                    }
-                                    // Handle scent work scores
-                                    else if (scores.passFail !== undefined) {
-                                        allParticipants.push({
-                                            id: participantId,
-                                            result: scores.passFail || '',
-                                            passed: scores.passFail === 'Pass',
-                                            entryType: scores.entryType || 'regular'
-                                        });
-                                    }
-                                }
-                            });
+                            // Check if any participants match our class
+                            const hasClassParticipants = Object.keys(data.participants).some(pid => 
+                                pid.includes(className)
+                            );
+                            
+                            if (hasClassParticipants) {
+                                // Add this document to our scores snapshot
+                                scoresSnapshot = {
+                                    empty: false,
+                                    docs: [doc],
+                                    forEach: function(callback) { [doc].forEach(callback); }
+                                };
+                            }
                         }
                     });
-                } else {
-                    // Process scores found via roundInfo
+                }
+                
+                // Apply scores to rounds
+                if (!scoresSnapshot.empty) {
                     scoresSnapshot.forEach(doc => {
                         const scoreData = doc.data();
                         if (scoreData.participants) {
                             Object.entries(scoreData.participants).forEach(([participantId, scores]) => {
-                                if (scores.numericalScore !== undefined) {
-                                    hasNumericalScores = true;
-                                    allParticipants.push({
-                                        id: participantId,
-                                        score: parseInt(scores.numericalScore) || 0,
-                                        passed: scores.passIndicator && scores.passIndicator.trim() !== '',
-                                        passIndicator: scores.passIndicator || '',
-                                        entryType: scores.entryType || 'regular'
-                                    });
-                                } else if (scores.passFail !== undefined) {
-                                    allParticipants.push({
-                                        id: participantId,
-                                        result: scores.passFail || '',
-                                        passed: scores.passFail === 'Pass',
-                                        entryType: scores.entryType || 'regular'
+                                if (participantId.includes(className)) {
+                                    // Find the round this score belongs to
+                                    roundsData.forEach(round => {
+                                        if (round.participants[participantId] !== undefined) {
+                                            round.hasScores = true;
+                                            
+                                            // Handle different score types
+                                            if (scores.passFail !== undefined) {
+                                                round.participants[participantId] = {
+                                                    passFail: scores.passFail,
+                                                    entryType: scores.entryType || 'regular'
+                                                };
+                                            } else if (scores.numericalScore !== undefined) {
+                                                round.participants[participantId] = {
+                                                    passFail: (scores.passIndicator && scores.passIndicator.trim() !== '') ? 'Pass' : 'Fail',
+                                                    numericalScore: scores.numericalScore,
+                                                    passIndicator: scores.passIndicator,
+                                                    entryType: scores.entryType || 'regular'
+                                                };
+                                            }
+                                        }
                                     });
                                 }
                             });
@@ -995,31 +1072,23 @@
                     });
                 }
                 
-                if (allParticipants.length > 0) {
-                    // Filter out FEO entries
-                    const regularParticipants = allParticipants.filter(p => p.entryType === 'regular');
-                    const feoCount = allParticipants.length - regularParticipants.length;
-                    
-                    const totalRun = regularParticipants.length;
-                    const totalPassed = regularParticipants.filter(p => p.passed).length;
-                    const passRate = totalRun > 0 ? ((totalPassed / totalRun) * 100).toFixed(1) : 0;
-                    
-                    console.log(`${className} stats - Total: ${totalRun}, Passed: ${totalPassed}, Pass Rate: ${passRate}%`);
-                    
-                    return {
-                        className: className,
-                        classType: classType,
-                        participants: totalRun,
-                        rounds: 1,
-                        completionRate: totalRun > 0 ? 100 : 0,
-                        passRate: parseFloat(passRate),
-                        feoFiltered: feoCount,
-                        hasScores: true
-                    };
-                } else {
-                    // Fall back to original method for classes without scores
-                    return await generateOriginalSummary(className);
-                }
+                const participantsList = Array.from(participantsMap.values());
+                
+                return {
+                    className: className,
+                    trialName: currentTrial.clubName || 'Unknown Trial',
+                    classType: detectClassType(className),
+                    participants: participantsList,
+                    rounds: roundsData,
+                    totalParticipants: participantsList.length,
+                    totalRounds: roundsData.length,
+                    debugInfo: {
+                        regularIncluded: participantsList.length,
+                        feoFiltered: 0, // This would need more complex tracking
+                        orphanedFiltered: 0,
+                        totalParticipants: participantsList.length
+                    }
+                };
                 
             } catch (error) {
                 console.error(`Error processing ${className}:`, error);
@@ -1030,7 +1099,6 @@
         async function generateOriginalSummary(className) {
             console.log(`Using original method for ${className}`);
             
-            // Check running orders for participant count
             try {
                 const currentTrialId = document.getElementById('trialSelect').value;
                 const orderDoc = await db.collection('running_orders').doc(currentTrialId).get();
@@ -1039,26 +1107,77 @@
                     const orderData = orderDoc.data();
                     const rounds = orderData.finalizedRunningOrders || orderData.generatedSheets || orderData.roundOrders || {};
                     
-                    let totalParticipants = 0;
+                    const participantsMap = new Map();
+                    const roundsData = [];
+                    
                     Object.entries(rounds).forEach(([roundKey, roundData]) => {
                         if (roundData.participants) {
-                            roundData.participants.forEach(participant => {
+                            const classParticipants = roundData.participants.filter(participant => {
                                 const participantId = typeof participant === 'string' ? participant : participant.id;
-                                if (participantId && participantId.includes(className)) {
-                                    totalParticipants++;
-                                }
+                                return participantId && participantId.includes(className);
                             });
+                            
+                            if (classParticipants.length > 0) {
+                                const roundInfo = {
+                                    roundKey: roundKey,
+                                    className: className,
+                                    judgeName: roundData.judgeName || 'Judge TBD',
+                                    participants: [],
+                                    hasScores: false
+                                };
+                                
+                                classParticipants.forEach(participant => {
+                                    const participantId = typeof participant === 'string' ? participant : participant.id;
+                                    const [docId] = participantId.split('_');
+                                    
+                                    // Skip orphaned scores
+                                    if (!entriesData[docId]) {
+                                        return;
+                                    }
+                                    
+                                    const parts = participantId.split('_');
+                                    if (parts.length > 1) {
+                                        const entryDetails = parts[1];
+                                        const dogMatch = entryDetails.match(/Dog:([^,]+)/);
+                                        const handlerMatch = entryDetails.match(/Handler:([^,]+)/);
+                                        const cwagsMatch = entryDetails.match(/CWAGS:([^,]+)/);
+                                        
+                                        const participantInfo = {
+                                            id: docId,
+                                            dogName: dogMatch ? dogMatch[1].trim() : 'Unknown',
+                                            handlerName: handlerMatch ? handlerMatch[1].trim() : 'Unknown Handler',
+                                            cwagsNumber: cwagsMatch ? cwagsMatch[1].trim() : 'TBD',
+                                            participantIds: [participantId]
+                                        };
+                                        
+                                        participantsMap.set(docId, participantInfo);
+                                        roundInfo.participants.push({ id: participantId });
+                                    }
+                                });
+                                
+                                if (roundInfo.participants.length > 0) {
+                                    roundsData.push(roundInfo);
+                                }
+                            }
                         }
                     });
                     
+                    const participantsList = Array.from(participantsMap.values());
+                    
                     return {
                         className: className,
-                        participants: totalParticipants,
-                        rounds: totalParticipants > 0 ? 1 : 0,
-                        completionRate: 0,
-                        passRate: 0,
-                        feoFiltered: 0,
-                        hasScores: false
+                        trialName: currentTrial.clubName || 'Unknown Trial',
+                        classType: detectClassType(className),
+                        participants: participantsList,
+                        rounds: roundsData,
+                        totalParticipants: participantsList.length,
+                        totalRounds: roundsData.length,
+                        debugInfo: {
+                            regularIncluded: participantsList.length,
+                            feoFiltered: 0,
+                            orphanedFiltered: 0,
+                            totalParticipants: participantsList.length
+                        }
                     };
                 }
             } catch (error) {
@@ -1067,12 +1186,18 @@
             
             return {
                 className: className,
-                participants: 0,
-                rounds: 0,
-                completionRate: 0,
-                passRate: 0,
-                feoFiltered: 0,
-                hasScores: false
+                trialName: currentTrial.clubName || 'Unknown Trial',
+                classType: detectClassType(className),
+                participants: [],
+                rounds: [],
+                totalParticipants: 0,
+                totalRounds: 0,
+                debugInfo: {
+                    regularIncluded: 0,
+                    feoFiltered: 0,
+                    orphanedFiltered: 0,
+                    totalParticipants: 0
+                }
             };
         }
         
