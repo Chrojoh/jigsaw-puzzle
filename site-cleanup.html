@@ -504,19 +504,207 @@
             }
         }
 
-        async function cleanupSingleTrial(trialId) {
-            addLogEntry(`Cleaning trial: ${trialId}`);
+        // Enhanced ghost entries cleanup with source data validation
+        async function cleanupGhostEntries() {
+            const trialId = document.getElementById('trialSelect').value;
+            if (!trialId) {
+                showStatus('Please select a trial first', 'warning');
+                return;
+            }
+
+            if (!confirm('This will clean source data AND cached reports. Continue?')) {
+                return;
+            }
+
+            try {
+                setButtonState('ghostCleanupBtn', true, '🔄 Deep Cleaning...');
+                addLogEntry('Starting comprehensive ghost entry cleanup...');
+                updateProgress(10);
+
+                if (trialId === 'ALL') {
+                    await cleanupAllTrials();
+                } else {
+                    await deepCleanupSingleTrial(trialId);
+                }
+
+                updateProgress(100);
+                addLogEntry('Comprehensive cleanup completed successfully!', 'success');
+                showStatus('Ghost entries cleaned up successfully!', 'success');
+
+            } catch (error) {
+                console.error('Error during cleanup:', error);
+                addLogEntry('Cleanup failed: ' + error.message, 'error');
+                showStatus('Cleanup failed: ' + error.message, 'error');
+            } finally {
+                setButtonState('ghostCleanupBtn', false, '🧹 Clean Ghost Entries');
+                updateProgress(0);
+            }
+        }
+
+        async function deepCleanupSingleTrial(trialId) {
+            addLogEntry(`Deep cleaning trial: ${trialId}`);
             
-            // Clear report caches
-            updateProgress(30);
+            // Step 1: Validate and clean source data
+            updateProgress(20);
+            await validateAndCleanSourceData(trialId);
+            
+            // Step 2: Clear report caches
+            updateProgress(50);
             await clearReportCaches(trialId);
             
-            // Force report regeneration
-            updateProgress(60);
+            // Step 3: Force report regeneration
+            updateProgress(80);
             await forceReportRegeneration(trialId);
             
-            updateProgress(90);
-            addLogEntry(`Completed cleanup for trial: ${trialId}`, 'success');
+            updateProgress(95);
+            addLogEntry(`Completed deep cleanup for trial: ${trialId}`, 'success');
+        }
+
+        async function validateAndCleanSourceData(trialId) {
+            addLogEntry('🔍 Validating source data against running orders...');
+            
+            try {
+                // Load the running order data
+                const runningOrderDoc = await db.collection('running_orders').doc(trialId).get();
+                if (!runningOrderDoc.exists) {
+                    addLogEntry('No running order found - skipping source validation', 'warning');
+                    return;
+                }
+
+                const runningOrderData = runningOrderDoc.data();
+                let validParticipantIds = new Set();
+                
+                // Extract all valid participant IDs from running orders
+                if (runningOrderData.roundOrders) {
+                    Object.values(runningOrderData.roundOrders).forEach(participants => {
+                        if (Array.isArray(participants)) {
+                            participants.forEach(pid => validParticipantIds.add(pid));
+                        }
+                    });
+                }
+                
+                if (runningOrderData.finalizedRunningOrders) {
+                    Object.values(runningOrderData.finalizedRunningOrders).forEach(roundData => {
+                        if (roundData.participants) {
+                            roundData.participants.forEach(p => {
+                                if (typeof p === 'string') {
+                                    validParticipantIds.add(p);
+                                } else if (p.id) {
+                                    validParticipantIds.add(p.id);
+                                }
+                            });
+                        }
+                    });
+                }
+
+                addLogEntry(`Found ${validParticipantIds.size} valid participants in running orders`);
+                
+                // Now clean up entries that don't match running orders
+                await cleanupInvalidEntries(trialId, validParticipantIds);
+                
+                // Clean up any stale class summary data
+                await cleanupClassSummaryData(trialId, validParticipantIds);
+                
+            } catch (error) {
+                addLogEntry('Error validating source data: ' + error.message, 'error');
+                throw error;
+            }
+        }
+
+        async function cleanupInvalidEntries(trialId, validParticipantIds) {
+            addLogEntry('🧹 Cleaning invalid entries...');
+            
+            try {
+                // Check entries collection for orphaned records
+                const entriesSnapshot = await db.collection('entries')
+                    .where('trialId', '==', trialId)
+                    .get();
+
+                let invalidEntries = 0;
+                const batch = db.batch();
+
+                entriesSnapshot.forEach(doc => {
+                    const entryData = doc.data();
+                    let hasValidParticipant = false;
+                    
+                    // Check if any selectedEntries match running order participants
+                    if (entryData.selectedEntries) {
+                        entryData.selectedEntries.forEach(selectedEntry => {
+                            // Generate participant ID patterns to check
+                            const possibleIds = [
+                                `${doc.id}_${selectedEntry.className}-Round ${selectedEntry.roundNumber}-${selectedEntry.dayIndex}-${selectedEntry.classIndex}`,
+                                `${doc.id}_${selectedEntry.className}_Round${selectedEntry.roundNumber}`,
+                                doc.id
+                            ];
+                            
+                            possibleIds.forEach(id => {
+                                if (validParticipantIds.has(id)) {
+                                    hasValidParticipant = true;
+                                }
+                            });
+                        });
+                    }
+                    
+                    if (!hasValidParticipant) {
+                        addLogEntry(`Marking invalid entry: ${entryData.handlerName} - ${entryData.dogCallName}`, 'warning');
+                        // Don't delete - just mark as invalid to prevent it from appearing in reports
+                        batch.update(doc.ref, { 
+                            isGhostEntry: true,
+                            cleanedAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                        invalidEntries++;
+                    }
+                });
+
+                if (invalidEntries > 0) {
+                    await batch.commit();
+                    addLogEntry(`Marked ${invalidEntries} invalid entries`, 'success');
+                } else {
+                    addLogEntry('No invalid entries found', 'info');
+                }
+
+            } catch (error) {
+                addLogEntry('Error cleaning invalid entries: ' + error.message, 'error');
+                throw error;
+            }
+        }
+
+        async function cleanupClassSummaryData(trialId, validParticipantIds) {
+            addLogEntry('🧹 Cleaning class summary data...');
+            
+            try {
+                // Clear any cached class summary data that might contain ghost entries
+                const classSummaryDocs = await db.collection('class_summaries')
+                    .where('trialId', '==', trialId)
+                    .get();
+
+                if (!classSummaryDocs.empty) {
+                    const batch = db.batch();
+                    classSummaryDocs.forEach(doc => {
+                        batch.delete(doc.ref);
+                    });
+                    await batch.commit();
+                    addLogEntry(`Deleted ${classSummaryDocs.size} cached class summary documents`, 'success');
+                }
+
+                // Also clear any processed data collections
+                const processedDataDocs = await db.collection('processed_trial_data')
+                    .where('trialId', '==', trialId)
+                    .get();
+
+                if (!processedDataDocs.empty) {
+                    const batch = db.batch();
+                    processedDataDocs.forEach(doc => {
+                        batch.delete(doc.ref);
+                    });
+                    await batch.commit();
+                    addLogEntry(`Deleted ${processedDataDocs.size} processed data documents`, 'success');
+                }
+
+            } catch (error) {
+                addLogEntry('Error cleaning class summary data: ' + error.message, 'error');
+                throw error;
+            }
         }
 
         async function cleanupAllTrials() {
@@ -626,7 +814,7 @@
             }
         }
 
-        // Scan for ghost entries
+        // Enhanced scan for ghost entries with detailed reporting
         async function scanForGhostEntries() {
             const trialId = document.getElementById('trialSelect').value;
             if (!trialId) {
@@ -635,18 +823,158 @@
             }
 
             try {
-                setButtonState('ghostScanBtn', true, '🔍 Scanning...');
-                addLogEntry('Scanning for ghost entries...');
+                setButtonState('ghostScanBtn', true, '🔍 Deep Scanning...');
+                addLogEntry('Starting comprehensive ghost entry scan...');
+                updateProgress(10);
                 
-                // This is a placeholder - in a real implementation, you'd scan the actual data
-                addLogEntry('Scan completed - check reports manually for ghost entries', 'info');
-                showStatus('Scan completed - check your reports for any remaining ghost entries', 'info');
+                const ghostReport = await performGhostEntryScan(trialId);
+                updateProgress(100);
+                
+                // Display results
+                displayGhostScanResults(ghostReport);
+                
+                showStatus(`Scan completed - found ${ghostReport.totalGhosts} ghost entries`, 
+                    ghostReport.totalGhosts > 0 ? 'warning' : 'success');
 
             } catch (error) {
                 addLogEntry('Scan failed: ' + error.message, 'error');
                 showStatus('Scan failed: ' + error.message, 'error');
             } finally {
                 setButtonState('ghostScanBtn', false, '🔍 Scan for Issues');
+                updateProgress(0);
+            }
+        }
+
+        async function performGhostEntryScan(trialId) {
+            const report = {
+                trialId: trialId,
+                runningOrderParticipants: new Set(),
+                entryFormParticipants: new Set(),
+                ghostEntries: [],
+                orphanedScores: [],
+                totalGhosts: 0
+            };
+
+            addLogEntry('📋 Loading running order data...');
+            
+            // Load running order participants
+            const runningOrderDoc = await db.collection('running_orders').doc(trialId).get();
+            if (runningOrderDoc.exists) {
+                const runningOrderData = runningOrderDoc.data();
+                
+                // Extract participants from different data structures
+                if (runningOrderData.roundOrders) {
+                    Object.values(runningOrderData.roundOrders).forEach(participants => {
+                        if (Array.isArray(participants)) {
+                            participants.forEach(pid => report.runningOrderParticipants.add(pid));
+                        }
+                    });
+                }
+                
+                if (runningOrderData.finalizedRunningOrders) {
+                    Object.values(runningOrderData.finalizedRunningOrders).forEach(roundData => {
+                        if (roundData.participants) {
+                            roundData.participants.forEach(p => {
+                                const id = typeof p === 'string' ? p : p.id;
+                                if (id) report.runningOrderParticipants.add(id);
+                            });
+                        }
+                    });
+                }
+                
+                addLogEntry(`Found ${report.runningOrderParticipants.size} participants in running orders`);
+            }
+
+            addLogEntry('📝 Loading entry form data...');
+            
+            // Load entry form participants
+            const entriesSnapshot = await db.collection('entries')
+                .where('trialId', '==', trialId)
+                .get();
+
+            entriesSnapshot.forEach(doc => {
+                const entryData = doc.data();
+                if (entryData.selectedEntries && !entryData.isGhostEntry) {
+                    entryData.selectedEntries.forEach(selectedEntry => {
+                        // Generate possible participant IDs
+                        const possibleIds = [
+                            `${doc.id}_${selectedEntry.className}-Round ${selectedEntry.roundNumber}-${selectedEntry.dayIndex}-${selectedEntry.classIndex}`,
+                            `${doc.id}_${selectedEntry.className}_Round${selectedEntry.roundNumber}`,
+                            doc.id
+                        ];
+                        
+                        possibleIds.forEach(id => report.entryFormParticipants.add(id));
+                        
+                        // Check if this entry appears in running orders
+                        const inRunningOrder = possibleIds.some(id => report.runningOrderParticipants.has(id));
+                        
+                        if (!inRunningOrder) {
+                            report.ghostEntries.push({
+                                docId: doc.id,
+                                handlerName: entryData.handlerName,
+                                dogCallName: entryData.dogCallName,
+                                className: selectedEntry.className,
+                                cwagsNumber: entryData.cwagsNumber,
+                                reason: 'Entry exists in forms but not in running orders'
+                            });
+                        }
+                    });
+                }
+            });
+
+            addLogEntry('🎯 Checking for orphaned scores...');
+            
+            // Check for orphaned scores
+            const scoresSnapshot = await db.collection('scores')
+                .where('trialId', '==', trialId)
+                .get();
+
+            scoresSnapshot.forEach(doc => {
+                const scoreData = doc.data();
+                if (scoreData.participants) {
+                    Object.keys(scoreData.participants).forEach(participantId => {
+                        if (!report.runningOrderParticipants.has(participantId)) {
+                            report.orphanedScores.push({
+                                docId: doc.id,
+                                participantId: participantId,
+                                roundKey: scoreData.roundKey
+                            });
+                        }
+                    });
+                }
+            });
+
+            report.totalGhosts = report.ghostEntries.length + report.orphanedScores.length;
+            return report;
+        }
+
+        function displayGhostScanResults(report) {
+            addLogEntry('📊 GHOST ENTRY SCAN RESULTS:', 'info');
+            addLogEntry(`Running Order Participants: ${report.runningOrderParticipants.size}`, 'info');
+            addLogEntry(`Entry Form Participants: ${report.entryFormParticipants.size}`, 'info');
+            addLogEntry(`Ghost Entries Found: ${report.ghostEntries.length}`, report.ghostEntries.length > 0 ? 'warning' : 'success');
+            addLogEntry(`Orphaned Scores Found: ${report.orphanedScores.length}`, report.orphanedScores.length > 0 ? 'warning' : 'success');
+            
+            if (report.ghostEntries.length > 0) {
+                addLogEntry('👻 GHOST ENTRIES FOUND:', 'warning');
+                report.ghostEntries.forEach(ghost => {
+                    addLogEntry(`  • ${ghost.handlerName} - ${ghost.dogCallName} (${ghost.cwagsNumber}) in ${ghost.className}`, 'warning');
+                });
+                addLogEntry('These entries appear in reports but not in running orders', 'warning');
+            }
+            
+            if (report.orphanedScores.length > 0) {
+                addLogEntry('🎯 ORPHANED SCORES FOUND:', 'warning');
+                report.orphanedScores.forEach(score => {
+                    addLogEntry(`  • Score record ${score.docId} for participant ${score.participantId}`, 'warning');
+                });
+            }
+            
+            if (report.totalGhosts === 0) {
+                addLogEntry('✅ No ghost entries or orphaned data found!', 'success');
+            } else {
+                addLogEntry(`⚠️ Total issues found: ${report.totalGhosts}`, 'warning');
+                addLogEntry('Run "Clean Ghost Entries" to fix these issues', 'info');
             }
         }
 
