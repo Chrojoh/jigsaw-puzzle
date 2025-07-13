@@ -718,12 +718,12 @@
         let registrationData = [];
         let participantEntryTypes = {}; // Track entry types for participants
 
-        // Standard field names
+        // Standard field names - CORRECTED based on troubleshooting
         const STANDARD_FIELDS = {
             HANDLER_NAME: 'handlerName',
             DOG_CALL_NAME: 'dogCallName',
-            JUDGE_NAME: 'judgeName',
-            CLASS_NAME: 'className',
+            JUDGE_NAME: 'judge',        // CORRECTED: your system uses 'judge'
+            CLASS_NAME: 'class',       // CORRECTED: your system uses 'class'
             CWAGS_NUMBER: 'cwagsNumber'
         };
 
@@ -1310,7 +1310,39 @@
             }
         }
 
-        function renderScoreSheet(round) {
+        // Load participant details asynchronously
+        async function loadParticipantDetails(participantId, row) {
+            try {
+                const [docId] = participantId.split('_');
+                
+                // Load the entry document to get handler and dog names
+                const entryDoc = await db.collection('entries').doc(docId).get();
+                
+                if (entryDoc.exists) {
+                    const entryData = entryDoc.data();
+                    const handlerName = entryData.handlerName || 'Unknown Handler';
+                    const dogCallName = entryData.dogCallName || 'Unknown Dog';
+                    
+                    // Update the team name cell in the row
+                    const teamNameCell = row.querySelector('.team-name');
+                    if (teamNameCell) {
+                        teamNameCell.textContent = `${handlerName} - ${dogCallName}`;
+                    }
+                } else {
+                    console.warn(`Entry document not found for participant: ${participantId}`);
+                    const teamNameCell = row.querySelector('.team-name');
+                    if (teamNameCell) {
+                        teamNameCell.textContent = 'Entry Not Found';
+                    }
+                }
+            } catch (error) {
+                console.error(`Error loading participant details for ${participantId}:`, error);
+                const teamNameCell = row.querySelector('.team-name');
+                if (teamNameCell) {
+                    teamNameCell.textContent = 'Error Loading';
+                }
+            }
+        }
             document.getElementById('sheetClass').textContent = round.className;
             document.getElementById('sheetRound').textContent = `Round ${round.roundNumber}`;
             document.getElementById('sheetDate').textContent = round.date ? round.date.toLocaleDateString() : 'Date TBD';
@@ -1328,16 +1360,29 @@
             round.participants.forEach((participant) => {
                 const row = document.createElement('tr');
                 
-                // Handle different participant object structures
+                // Handle participant format - they are strings, not objects
                 let participantId, handlerName, dogCallName;
                 
-                if (typeof participant === 'object') {
+                if (typeof participant === 'string') {
+                    participantId = participant;
+                    
+                    // Extract handler and dog names from entries data
+                    const [docId] = participantId.split('_');
+                    
+                    // Try to get handler/dog names from entries (we'll need to load this)
+                    handlerName = 'Loading...';
+                    dogCallName = 'Loading...';
+                    
+                    // We'll update this asynchronously
+                    loadParticipantDetails(participantId, row);
+                    
+                } else if (typeof participant === 'object') {
                     participantId = participant.id || `participant_${Math.random().toString(36).substr(2, 9)}`;
                     handlerName = participant.handlerName || participant.handler || 'Unknown Handler';
                     dogCallName = participant.dogCallName || participant.dog || 'Unknown Dog';
                 } else {
-                    // If participant is just a string ID
-                    participantId = participant;
+                    // Fallback
+                    participantId = `participant_${Math.random().toString(36).substr(2, 9)}`;
                     handlerName = 'Unknown Handler';
                     dogCallName = 'Unknown Dog';
                 }
