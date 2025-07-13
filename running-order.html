@@ -610,6 +610,32 @@ function processRoundKey(roundKey) {
     return result;
 }
 
+/ Class Detection Function (add to running-order.html)
+function detectClassType(className) {
+    const lowerClassName = className.toLowerCase();
+    console.log(`🎯 Detecting class type for: "${className}"`);
+    
+    // Rally detection
+    if (lowerClassName.includes('rally')) {
+        return 'rally';
+    }
+    
+    // Scent work detection  
+    if (lowerClassName.includes('scent') || lowerClassName.includes('detective')) {
+        return 'scent';
+    }
+    
+    // Games detection
+    if (lowerClassName.includes('games') || lowerClassName.includes('game') ||
+        lowerClassName.includes('grab bag') || lowerClassName.includes('colors') ||
+        lowerClassName.includes('black jack') || lowerClassName.includes('pairs') ||
+        lowerClassName.includes('team')) {
+        return 'games';
+    }
+    
+    // Obedience detection (default)
+    return 'obedience';
+        
 // ========================================
 // DATA MIGRATION FUNCTIONS
 // ========================================
