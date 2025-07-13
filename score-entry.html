@@ -568,6 +568,7 @@
         // Class Detection Function
         function detectClassType(className) {
             const lowerClassName = className.toLowerCase();
+            console.log(`🎯 Detecting class type for: "${className}"`);
             
             // Rally detection - check for rally classes first
             if (lowerClassName.includes('rally') || 
@@ -576,25 +577,44 @@
                 lowerClassName.includes('pro') || 
                 lowerClassName.includes('arf') || 
                 lowerClassName.includes('zoom')) {
+                console.log(`✅ Detected as Rally class: ${className}`);
                 return 'rally';
+            }
+            
+            // Games detection - check for games classes
+            if (lowerClassName.includes('games') || lowerClassName.includes('game')) {
+                console.log(`✅ Detected as Games class: ${className}`);
+                return 'games';
             }
             
             // Obedience detection
             if (lowerClassName.includes('obedience') || lowerClassName.includes('obed')) {
-                if (lowerClassName.includes('5')) return 'obedience5';
-                if (lowerClassName.includes('4')) return 'obedience4';
-                if (lowerClassName.includes('3')) return 'obedience3';
-                if (lowerClassName.includes('2')) return 'obedience2';
-                if (lowerClassName.includes('1')) return 'obedience1';
+                if (lowerClassName.includes('5')) {
+                    console.log(`✅ Detected as Obedience 5 class: ${className}`);
+                    return 'obedience5';
+                }
+                if (lowerClassName.includes('4')) {
+                    console.log(`✅ Detected as Obedience 4 class: ${className}`);
+                    return 'obedience4';
+                }
+                if (lowerClassName.includes('3')) {
+                    console.log(`✅ Detected as Obedience 3 class: ${className}`);
+                    return 'obedience3';
+                }
+                if (lowerClassName.includes('2')) {
+                    console.log(`✅ Detected as Obedience 2 class: ${className}`);
+                    return 'obedience2';
+                }
+                if (lowerClassName.includes('1')) {
+                    console.log(`✅ Detected as Obedience 1 class: ${className}`);
+                    return 'obedience1';
+                }
+                console.log(`✅ Detected as Obedience 1 class (default): ${className}`);
                 return 'obedience1'; // Default
             }
             
-            // Games detection
-            if (lowerClassName.includes('games') || lowerClassName.includes('game')) {
-                return 'games';
-            }
-            
-            // Scent work detection (default)
+            // Scent work detection (default for unrecognized classes)
+            console.log(`✅ Detected as Scent Work class (default): ${className}`);
             return 'scent';
         }
 
