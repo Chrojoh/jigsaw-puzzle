@@ -481,6 +481,38 @@
         const db = firebase.firestore();
         console.log('🔥 Firebase initialized');
 
+        // Add this new function after Firebase init
+function detectClassType(className) {
+    const lowerClassName = className.toLowerCase();
+    
+    // Rally detection - check for rally classes first
+    if (lowerClassName.includes('rally') || 
+        lowerClassName.includes('starter') || 
+        lowerClassName.includes('advanced') || 
+        lowerClassName.includes('pro') || 
+        lowerClassName.includes('arf') || 
+        lowerClassName.includes('zoom')) {
+        return 'rally';
+    }
+    
+    // Games detection
+    if (lowerClassName.includes('games') || lowerClassName.includes('game')) {
+        return 'games';
+    }
+    
+    // Obedience detection
+    if (lowerClassName.includes('obedience') || lowerClassName.includes('obed')) {
+        if (lowerClassName.includes('5')) return 'obedience5';
+        if (lowerClassName.includes('4')) return 'obedience4';
+        if (lowerClassName.includes('3')) return 'obedience3';
+        if (lowerClassName.includes('2')) return 'obedience2';
+        if (lowerClassName.includes('1')) return 'obedience1';
+        return 'obedience1';
+    }
+    
+    return 'scent';
+}
+        
         // ===== GLOBAL VARIABLES =====
         let summaryData = null;
         let currentTrial = null;
