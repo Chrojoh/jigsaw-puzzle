@@ -408,7 +408,7 @@
     </div>
 
     <script>
-        // C-WAGS Standard Class Order
+       // C-WAGS Standard Class Order
 const CWAGS_CLASS_ORDER = [
     'Patrol 1', 'Detective 2', 'Investigator 3', 'Super Sleuth 4', 'Private Inv', 'Det Diversions',
     'Ranger 1', 'Ranger 2', 'Ranger 3', 'Ranger 4', 'Ranger 5',
@@ -418,23 +418,24 @@ const CWAGS_CLASS_ORDER = [
     'Zoom 1', 'Zoom 1.5', 'Zoom 2',
     'Games 1', 'Games 2', 'Games 3', 'Games 4'
 ];
-        
-        // Firebase Configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyBWpyM_lEpqdQWuKuLLZiW1SlloWsWkJCs",
-            authDomain: "dog-trialing-system.firebaseapp.com",
-            projectId: "dog-trialing-system",
-            storageBucket: "dog-trialing-system.firebasestorage.app",
-            messagingSenderId: "490812593982",
-            appId: "1:490812593982:web:344776707566f8d9027e6f",
-            measurementId: "G-EMLX58Y278"
-        };
 
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const db = firebase.firestore();
-        // ========================================
+// Firebase Configuration
+const firebaseConfig = {
+    apiKey: "AIzaSyBWpyM_lEpqdQWuKuLLZiW1SlloWsWkJCs",
+    authDomain: "dog-trialing-system.firebaseapp.com",
+    projectId: "dog-trialing-system",
+    storageBucket: "dog-trialing-system.firebasestorage.app",
+    messagingSenderId: "490812593982",
+    appId: "1:490812593982:web:344776707566f8d9027e6f",
+    measurementId: "G-EMLX58Y278"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// ========================================
 // ROUND KEY UTILITY FUNCTIONS
 // ========================================
 
@@ -610,7 +611,7 @@ function processRoundKey(roundKey) {
     return result;
 }
 
-// Class Detection Function (add to running-order.html)
+// Class Detection Function - FIXED VERSION
 function detectClassType(className) {
     const lowerClassName = className.toLowerCase();
     console.log(`🎯 Detecting class type for: "${className}"`);
@@ -635,7 +636,8 @@ function detectClassType(className) {
     
     // Obedience detection (default)
     return 'obedience';
-        
+} // ← ADDED MISSING CLOSING BRACE
+
 // ========================================
 // DATA MIGRATION FUNCTIONS
 // ========================================
@@ -856,118 +858,100 @@ function getRoundKeyIndices(roundKey) {
 }
 
 // ========================================
-// INTEGRATION HELPER
+// TIMEZONE-SAFE DATE UTILITIES
 // ========================================
 
-/**
- * Replace existing round key parsing in your code with this function
- * Example usage in single-day-trial-report.html:
- * 
- * OLD CODE:
- * const [dayIndex, classIndex, roundIndex] = roundKey.split('-').map(Number);
- * 
- * NEW CODE:
- * const indices = getRoundKeyIndices(roundKey);
- * if (indices) {
- *   const { dayIndex, classIndex, roundIndex } = indices;
- *   // ... rest of your code
- * }
- */
-        // ========================================
-        // TIMEZONE-SAFE DATE UTILITIES
-        // ========================================
+function createLocalDate(dateStr) {
+    if (!dateStr) return null;
+    if (typeof dateStr === 'string') {
+        const dateWithTime = dateStr.includes('T') ? dateStr : dateStr + 'T12:00:00';
+        return new Date(dateWithTime);
+    }
+    return new Date(dateStr);
+}
 
-        function createLocalDate(dateStr) {
-            if (!dateStr) return null;
-            if (typeof dateStr === 'string') {
-                const dateWithTime = dateStr.includes('T') ? dateStr : dateStr + 'T12:00:00';
-                return new Date(dateWithTime);
-            }
-            return new Date(dateStr);
-        }
+function formatLocalDate(date) {
+    if (!date || !(date instanceof Date)) return '';
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
 
-        function formatLocalDate(date) {
-            if (!date || !(date instanceof Date)) return '';
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
-        }
+function getDateFromFirebase(firebaseDate) {
+    if (!firebaseDate) return '';
+    let date;
+    if (firebaseDate.toDate) {
+        date = firebaseDate.toDate();
+    } else if (firebaseDate instanceof Date) {
+        date = firebaseDate;
+    } else if (typeof firebaseDate === 'string') {
+        date = createLocalDate(firebaseDate);
+    } else {
+        return '';
+    }
+    return formatLocalDate(date);
+}
 
-        function getDateFromFirebase(firebaseDate) {
-            if (!firebaseDate) return '';
-            let date;
-            if (firebaseDate.toDate) {
-                date = firebaseDate.toDate();
-            } else if (firebaseDate instanceof Date) {
-                date = firebaseDate;
-            } else if (typeof firebaseDate === 'string') {
-                date = createLocalDate(firebaseDate);
-            } else {
-                return '';
-            }
-            return formatLocalDate(date);
-        }
+// Global variables
+let currentUser = null;
+let currentTrial = null;
+let runningOrderData = {};
+let originalOrderData = {};
+let currentDay = 0;
 
-        // Global variables
-        let currentUser = null;
-        let currentTrial = null;
-        let runningOrderData = {};
-        let originalOrderData = {};
-        let currentDay = 0;
+// Standard field names
+const STANDARD_FIELDS = {
+    HANDLER_NAME: 'handlerName',
+    DOG_CALL_NAME: 'dogCallName',
+    JUDGE_NAME: 'judgeName',
+    CLASS_NAME: 'className'
+};
 
-        // Standard field names
-        const STANDARD_FIELDS = {
-            HANDLER_NAME: 'handlerName',
-            DOG_CALL_NAME: 'dogCallName',
-            JUDGE_NAME: 'judgeName',
-            CLASS_NAME: 'className'
-        };
+// Utility functions
+function showStatus(message, type = 'info') {
+    const statusDiv = document.getElementById('statusMessage');
+    statusDiv.textContent = message;
+    statusDiv.className = `status-message status-${type}`;
+    statusDiv.style.display = 'block';
+    
+    setTimeout(() => {
+        statusDiv.style.display = 'none';
+    }, 5000);
+}
 
-        // Utility functions
-        function showStatus(message, type = 'info') {
-            const statusDiv = document.getElementById('statusMessage');
-            statusDiv.textContent = message;
-            statusDiv.className = `status-message status-${type}`;
-            statusDiv.style.display = 'block';
-            
-            setTimeout(() => {
-                statusDiv.style.display = 'none';
-            }, 5000);
-        }
-
-        // Initialize the application
-        async function init() {
-            try {
-                await new Promise((resolve, reject) => {
-                    const unsubscribe = auth.onAuthStateChanged(async (user) => {
-                        unsubscribe();
-                        if (user) {
-                            try {
-                                const userDoc = await db.collection('users').doc(user.uid).get();
-                                if (userDoc.exists) {
-                                    currentUser = { uid: user.uid, ...userDoc.data() };
-                                    resolve();
-                                } else {
-                                    reject(new Error('User profile not found'));
-                                }
-                            } catch (error) {
-                                reject(error);
-                            }
+// Initialize the application
+async function init() {
+    try {
+        await new Promise((resolve, reject) => {
+            const unsubscribe = auth.onAuthStateChanged(async (user) => {
+                unsubscribe();
+                if (user) {
+                    try {
+                        const userDoc = await db.collection('users').doc(user.uid).get();
+                        if (userDoc.exists) {
+                            currentUser = { uid: user.uid, ...userDoc.data() };
+                            resolve();
                         } else {
-                            window.location.href = 'index.html';
+                            reject(new Error('User profile not found'));
                         }
-                    });
-                });
+                    } catch (error) {
+                        reject(error);
+                    }
+                } else {
+                    window.location.href = 'index.html';
+                }
+            });
+        });
 
-                await loadTrials();
-            } catch (error) {
-                console.error('Error initializing:', error);
-                showStatus('Error initializing application: ' + error.message, 'error');
-            }
-        }
+        await loadTrials();
+    } catch (error) {
+        console.error('Error initializing:', error);
+        showStatus('Error initializing application: ' + error.message, 'error');
+    }
+}
 
-       // Load trials for the dropdown
+// Load trials for the dropdown
 async function loadTrials() {
     try {
         showStatus('Loading your trials...', 'info');
@@ -1029,529 +1013,530 @@ async function loadTrials() {
         showStatus('Error loading trials: ' + error.message, 'error');
     }
 }
-        // Load running order for selected trial
-        async function loadTrialRunningOrder() {
-            const trialId = document.getElementById('trialSelect').value;
-            
-            if (!trialId) {
-                document.getElementById('roundsGrid').innerHTML = '<div class="no-entries">Please select a trial to view running orders.</div>';
-                document.getElementById('runningOrderControls').style.display = 'none';
-                document.getElementById('dayTabsContainer').style.display = 'none';
-                document.getElementById('scoreSheetControls').style.display = 'none';
-                return;
-            }
 
-            try {
-                showStatus('Loading trial entries...', 'info');
+// Load running order for selected trial
+async function loadTrialRunningOrder() {
+    const trialId = document.getElementById('trialSelect').value;
+    
+    if (!trialId) {
+        document.getElementById('roundsGrid').innerHTML = '<div class="no-entries">Please select a trial to view running orders.</div>';
+        document.getElementById('runningOrderControls').style.display = 'none';
+        document.getElementById('dayTabsContainer').style.display = 'none';
+        document.getElementById('scoreSheetControls').style.display = 'none';
+        return;
+    }
 
-                const trialDoc = await db.collection('trials').doc(trialId).get();
-                if (!trialDoc.exists) {
-                    throw new Error('Trial not found');
-                }
+    try {
+        showStatus('Loading trial entries...', 'info');
 
-                currentTrial = { id: trialDoc.id, ...trialDoc.data() };
-
-                if (currentTrial.days && Array.isArray(currentTrial.days)) {
-                    currentTrial.days = currentTrial.days.map(day => ({
-                        ...day,
-                        date: day.date ? getDateFromFirebase(day.date) : null
-                    }));
-                }
-
-                const entriesSnapshot = await db.collection('entries')
-                    .where('trialId', '==', trialId)
-                    .get();
-
-                let existingOrder = {};
-                try {
-                    const orderDoc = await db.collection('running_orders').doc(trialId).get();
-                    if (orderDoc.exists) {
-                        existingOrder = orderDoc.data().roundOrders || {};
-                    }
-                } catch (error) {
-                    console.log('No existing running order found, will create new one');
-                }
-
-                await processEntriesIntoRunningOrder(entriesSnapshot, existingOrder);
-
-                showStatus(`Loaded running order for ${currentTrial.clubName}`, 'success');
-                document.getElementById('runningOrderControls').style.display = 'flex';
-                document.getElementById('scoreSheetControls').style.display = 'block';
-
-            } catch (error) {
-                console.error('Error loading trial running order:', error);
-                showStatus('Error loading running order: ' + error.message, 'error');
-            }
+        const trialDoc = await db.collection('trials').doc(trialId).get();
+        if (!trialDoc.exists) {
+            throw new Error('Trial not found');
         }
 
-        // Process entries into running order structure
-        async function processEntriesIntoRunningOrder(entriesSnapshot, existingOrder) {
-            runningOrderData = {};
-            originalOrderData = {};
+        currentTrial = { id: trialDoc.id, ...trialDoc.data() };
 
-            console.log('🔍 Processing trial structure:', currentTrial);
+        if (currentTrial.days && Array.isArray(currentTrial.days)) {
+            currentTrial.days = currentTrial.days.map(day => ({
+                ...day,
+                date: day.date ? getDateFromFirebase(day.date) : null
+            }));
+        }
 
-            if (currentTrial.days) {
-                currentTrial.days.forEach((day, dayIndex) => {
-                    runningOrderData[dayIndex] = {
-                        dayNumber: dayIndex + 1,
-                        date: day.date,
-                        rounds: {}
-                    };
-                    originalOrderData[dayIndex] = { rounds: {} };
+        const entriesSnapshot = await db.collection('entries')
+            .where('trialId', '==', trialId)
+            .get();
+
+        let existingOrder = {};
+        try {
+            const orderDoc = await db.collection('running_orders').doc(trialId).get();
+            if (orderDoc.exists) {
+                existingOrder = orderDoc.data().roundOrders || {};
+            }
+        } catch (error) {
+            console.log('No existing running order found, will create new one');
+        }
+
+        await processEntriesIntoRunningOrder(entriesSnapshot, existingOrder);
+
+        showStatus(`Loaded running order for ${currentTrial.clubName}`, 'success');
+        document.getElementById('runningOrderControls').style.display = 'flex';
+        document.getElementById('scoreSheetControls').style.display = 'block';
+
+    } catch (error) {
+        console.error('Error loading trial running order:', error);
+        showStatus('Error loading running order: ' + error.message, 'error');
+    }
+}
+
+// Process entries into running order structure
+async function processEntriesIntoRunningOrder(entriesSnapshot, existingOrder) {
+    runningOrderData = {};
+    originalOrderData = {};
+
+    console.log('🔍 Processing trial structure:', currentTrial);
+
+    if (currentTrial.days) {
+        currentTrial.days.forEach((day, dayIndex) => {
+            runningOrderData[dayIndex] = {
+                dayNumber: dayIndex + 1,
+                date: day.date,
+                rounds: {}
+            };
+            originalOrderData[dayIndex] = { rounds: {} };
+            
+            if (day.classes) {
+                day.classes.forEach((cls, classIndex) => {
+                    const className = cls.className || cls.class || cls.CLASS_NAME || `Class ${classIndex + 1}`;
                     
-                    if (day.classes) {
-                        day.classes.forEach((cls, classIndex) => {
-                            const className = cls.className || cls.class || cls.CLASS_NAME || `Class ${classIndex + 1}`;
+                    if (cls.rounds) {
+                        cls.rounds.forEach((round, roundIndex) => {
+                            const roundKey = `${dayIndex}-${classIndex}-${roundIndex}`;
+                            const roundId = `day${dayIndex + 1}_${className}_round${roundIndex + 1}`.replace(/\s+/g, '_');
+                            const judgeName = round.judgeName || round.judge || round.JUDGE_NAME || 'Judge TBD';
                             
-                            if (cls.rounds) {
-                                cls.rounds.forEach((round, roundIndex) => {
-                                    const roundKey = `${dayIndex}-${classIndex}-${roundIndex}`;
-                                    const roundId = `day${dayIndex + 1}_${className}_round${roundIndex + 1}`.replace(/\s+/g, '_');
-                                    const judgeName = round.judgeName || round.judge || round.JUDGE_NAME || 'Judge TBD';
-                                    
-                                    runningOrderData[dayIndex].rounds[roundKey] = {
-                                        id: roundId,
-                                        className: className,
-                                        roundNumber: roundIndex + 1,
-                                        judgeName: judgeName,
-                                        entries: []
-                                    };
-                                    
-                                    originalOrderData[dayIndex].rounds[roundKey] = { entries: [] };
-                                });
-                            }
+                            runningOrderData[dayIndex].rounds[roundKey] = {
+                                id: roundId,
+                                className: className,
+                                roundNumber: roundIndex + 1,
+                                judgeName: judgeName,
+                                entries: []
+                            };
+                            
+                            originalOrderData[dayIndex].rounds[roundKey] = { entries: [] };
                         });
                     }
                 });
             }
+        });
+    }
 
-            if (!entriesSnapshot.empty) {
-                entriesSnapshot.forEach(doc => {
-                    const entry = doc.data();
+    if (!entriesSnapshot.empty) {
+        entriesSnapshot.forEach(doc => {
+            const entry = doc.data();
+            
+            if (entry.selectedEntries) {
+                entry.selectedEntries.forEach(selectedEntry => {
+                    const dayIndex = selectedEntry.dayIndex;
+                    let classIndex = currentTrial.days[dayIndex].classes.findIndex(c => {
+                        const clsName = c.className || c.class || c.CLASS_NAME || '';
+                        return clsName === selectedEntry.className;
+                    });
+
+                    let finalClassIndex;
+                    if (classIndex !== -1) {
+                        finalClassIndex = classIndex;
+                    } else if (selectedEntry.classIndex !== undefined && selectedEntry.classIndex !== -1) {
+                        finalClassIndex = selectedEntry.classIndex;
+                    } else {
+                        finalClassIndex = 0;
+                    }
+
+                    if (finalClassIndex >= currentTrial.days[dayIndex].classes.length) {
+                        finalClassIndex = 0;
+                    }
+
+                    const roundKey = `${dayIndex}-${finalClassIndex}-${selectedEntry.roundIndex}`;
                     
-                    if (entry.selectedEntries) {
-                        entry.selectedEntries.forEach(selectedEntry => {
-                            const dayIndex = selectedEntry.dayIndex;
-                            let classIndex = currentTrial.days[dayIndex].classes.findIndex(c => {
-                                const clsName = c.className || c.class || c.CLASS_NAME || '';
-                                return clsName === selectedEntry.className;
-                            });
-
-                            let finalClassIndex;
-                            if (classIndex !== -1) {
-                                finalClassIndex = classIndex;
-                            } else if (selectedEntry.classIndex !== undefined && selectedEntry.classIndex !== -1) {
-                                finalClassIndex = selectedEntry.classIndex;
-                            } else {
-                                finalClassIndex = 0;
-                            }
-
-                            if (finalClassIndex >= currentTrial.days[dayIndex].classes.length) {
-                                finalClassIndex = 0;
-                            }
-
-                            const roundKey = `${dayIndex}-${finalClassIndex}-${selectedEntry.roundIndex}`;
-                            
-                            if (runningOrderData[dayIndex] && runningOrderData[dayIndex].rounds[roundKey]) {
-                                const entryItem = {
-                                    id: doc.id + '_' + selectedEntry.entryId,
-                                    handlerName: entry.handlerName.split(' ')[0],
-                                    dogCallName: entry.dogCallName,
-                                    entryType: selectedEntry.type,
-                                    originalOrder: runningOrderData[dayIndex].rounds[roundKey].entries.length
-                                };
-                                runningOrderData[dayIndex].rounds[roundKey].entries.push(entryItem);
-                                originalOrderData[dayIndex].rounds[roundKey].entries.push({ ...entryItem });
-                            }
-                        });
+                    if (runningOrderData[dayIndex] && runningOrderData[dayIndex].rounds[roundKey]) {
+                        const entryItem = {
+                            id: doc.id + '_' + selectedEntry.entryId,
+                            handlerName: entry.handlerName.split(' ')[0],
+                            dogCallName: entry.dogCallName,
+                            entryType: selectedEntry.type,
+                            originalOrder: runningOrderData[dayIndex].rounds[roundKey].entries.length
+                        };
+                        runningOrderData[dayIndex].rounds[roundKey].entries.push(entryItem);
+                        originalOrderData[dayIndex].rounds[roundKey].entries.push({ ...entryItem });
                     }
                 });
             }
+        });
+    }
 
-            Object.keys(existingOrder).forEach(roundKey => {
-                const [dayIndex] = roundKey.split('-').map(Number);
-                if (runningOrderData[dayIndex] && runningOrderData[dayIndex].rounds[roundKey] && existingOrder[roundKey]) {
-                    const round = runningOrderData[dayIndex].rounds[roundKey];
-                    const orderedEntries = [];
-                    const unorderedEntries = [...round.entries];
+    Object.keys(existingOrder).forEach(roundKey => {
+        const [dayIndex] = roundKey.split('-').map(Number);
+        if (runningOrderData[dayIndex] && runningOrderData[dayIndex].rounds[roundKey] && existingOrder[roundKey]) {
+            const round = runningOrderData[dayIndex].rounds[roundKey];
+            const orderedEntries = [];
+            const unorderedEntries = [...round.entries];
 
-                    existingOrder[roundKey].forEach(savedEntryId => {
-                        const entryIndex = unorderedEntries.findIndex(e => e.id === savedEntryId);
-                        if (entryIndex !== -1) {
-                            orderedEntries.push(unorderedEntries.splice(entryIndex, 1)[0]);
-                        }
-                    });
-
-                    orderedEntries.push(...unorderedEntries);
-                    round.entries = orderedEntries;
+            existingOrder[roundKey].forEach(savedEntryId => {
+                const entryIndex = unorderedEntries.findIndex(e => e.id === savedEntryId);
+                if (entryIndex !== -1) {
+                    orderedEntries.push(unorderedEntries.splice(entryIndex, 1)[0]);
                 }
             });
 
-            renderDayTabs();
-            renderRunningOrder();
+            orderedEntries.push(...unorderedEntries);
+            round.entries = orderedEntries;
         }
+    });
 
-        // Render day tabs
-        function renderDayTabs() {
-            const dayTabsContainer = document.getElementById('dayTabsContainer');
-            const dayTabs = document.getElementById('dayTabs');
-            
-            if (Object.keys(runningOrderData).length === 0) {
-                dayTabsContainer.style.display = 'none';
-                return;
-            }
+    renderDayTabs();
+    renderRunningOrder();
+}
 
-            dayTabsContainer.style.display = 'block';
-            dayTabs.innerHTML = '';
+// Render day tabs
+function renderDayTabs() {
+    const dayTabsContainer = document.getElementById('dayTabsContainer');
+    const dayTabs = document.getElementById('dayTabs');
+    
+    if (Object.keys(runningOrderData).length === 0) {
+        dayTabsContainer.style.display = 'none';
+        return;
+    }
 
-            Object.keys(runningOrderData).forEach((dayIndex, index) => {
-                const dayData = runningOrderData[dayIndex];
-                
-                const dayDate = dayData.date 
-                    ? createLocalDate(dayData.date).toLocaleDateString('en-US', { 
-                        weekday: 'short', 
-                        month: 'short', 
-                        day: 'numeric' 
-                    })
-                    : `Day ${dayData.dayNumber}`;
+    dayTabsContainer.style.display = 'block';
+    dayTabs.innerHTML = '';
 
-                const tabButton = document.createElement('button');
-                tabButton.type = 'button';
-                tabButton.className = `day-tab ${index === 0 ? 'active' : ''}`;
-                tabButton.onclick = () => showDay(parseInt(dayIndex));
-                tabButton.textContent = dayDate;
-                
-                dayTabs.appendChild(tabButton);
-            });
+    Object.keys(runningOrderData).forEach((dayIndex, index) => {
+        const dayData = runningOrderData[dayIndex];
+        
+        const dayDate = dayData.date 
+            ? createLocalDate(dayData.date).toLocaleDateString('en-US', { 
+                weekday: 'short', 
+                month: 'short', 
+                day: 'numeric' 
+            })
+            : `Day ${dayData.dayNumber}`;
 
-            const firstDayIndex = parseInt(Object.keys(runningOrderData)[0]);
-            currentDay = firstDayIndex;
-        }
+        const tabButton = document.createElement('button');
+        tabButton.type = 'button';
+        tabButton.className = `day-tab ${index === 0 ? 'active' : ''}`;
+        tabButton.onclick = () => showDay(parseInt(dayIndex));
+        tabButton.textContent = dayDate;
+        
+        dayTabs.appendChild(tabButton);
+    });
 
-        // Show specific day
-        function showDay(dayIndex) {
-            currentDay = dayIndex;
-            
-            document.querySelectorAll('.day-tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            
-            const dayTabs = document.querySelectorAll('.day-tab');
-            const dayKeys = Object.keys(runningOrderData);
-            const tabIndex = dayKeys.indexOf(dayIndex.toString());
-            if (dayTabs[tabIndex]) {
-                dayTabs[tabIndex].classList.add('active');
-            }
-            
-            renderRunningOrder();
-        }
+    const firstDayIndex = parseInt(Object.keys(runningOrderData)[0]);
+    currentDay = firstDayIndex;
+}
 
-        // Render the running order grid for current day
-        function renderRunningOrder() {
-            const roundsGrid = document.getElementById('roundsGrid');
-            
-            if (Object.keys(runningOrderData).length === 0) {
-                roundsGrid.innerHTML = '<div class="no-entries">No entries found for this trial.</div>';
-                return;
-            }
+// Show specific day
+function showDay(dayIndex) {
+    currentDay = dayIndex;
+    
+    document.querySelectorAll('.day-tab').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    
+    const dayTabs = document.querySelectorAll('.day-tab');
+    const dayKeys = Object.keys(runningOrderData);
+    const tabIndex = dayKeys.indexOf(dayIndex.toString());
+    if (dayTabs[tabIndex]) {
+        dayTabs[tabIndex].classList.add('active');
+    }
+    
+    renderRunningOrder();
+}
 
-            if (!runningOrderData[currentDay] || Object.keys(runningOrderData[currentDay].rounds).length === 0) {
-                roundsGrid.innerHTML = '<div class="no-entries">No classes scheduled for this day.</div>';
-                return;
-            }
+// Render the running order grid for current day
+function renderRunningOrder() {
+    const roundsGrid = document.getElementById('roundsGrid');
+    
+    if (Object.keys(runningOrderData).length === 0) {
+        roundsGrid.innerHTML = '<div class="no-entries">No entries found for this trial.</div>';
+        return;
+    }
 
-            const dayData = runningOrderData[currentDay];
-            let html = '';
+    if (!runningOrderData[currentDay] || Object.keys(runningOrderData[currentDay].rounds).length === 0) {
+        roundsGrid.innerHTML = '<div class="no-entries">No classes scheduled for this day.</div>';
+        return;
+    }
 
-            Object.keys(dayData.rounds).forEach(roundKey => {
-                const round = dayData.rounds[roundKey];
-                
-                html += `
-                    <div class="round-column">
-                        <div class="round-header">
-                            ${dayData.date ? createLocalDate(dayData.date).toLocaleDateString() : 'Date TBD'}
+    const dayData = runningOrderData[currentDay];
+    let html = '';
+
+    Object.keys(dayData.rounds).forEach(roundKey => {
+        const round = dayData.rounds[roundKey];
+        
+        html += `
+            <div class="round-column">
+                <div class="round-header">
+                    ${dayData.date ? createLocalDate(dayData.date).toLocaleDateString() : 'Date TBD'}
+                </div>
+                <div class="round-info">
+                    <div class="judge-name">${round.judgeName}</div>
+                    <div class="class-round">${round.className} Round ${round.roundNumber}</div>
+                </div>
+                <div class="round-actions">
+                    <button class="btn btn-sm btn-info" onclick="generateRoundScoreSheet('${roundKey}')">
+                        📋 Generate Score Sheet
+                    </button>
+                </div>
+                <div class="entries-list" id="entries_${roundKey}" data-round-key="${roundKey}">
+                    ${round.entries.map((entry, index) => `
+                        <div class="entry-item entry-type-${entry.entryType}" data-entry-id="${entry.id}">
+                            <span class="entry-text">${entry.handlerName} - ${entry.dogCallName}</span>
+                            <div class="entry-controls">
+                                <button onclick="moveEntryUp('${roundKey}', ${index})" title="Move Up">↑</button>
+                                <button onclick="moveEntryDown('${roundKey}', ${index})" title="Move Down">↓</button>
+                            </div>
                         </div>
-                        <div class="round-info">
-                            <div class="judge-name">${round.judgeName}</div>
-                            <div class="class-round">${round.className} Round ${round.roundNumber}</div>
-                        </div>
-                        <div class="round-actions">
-                            <button class="btn btn-sm btn-info" onclick="generateRoundScoreSheet('${roundKey}')">
-                                📋 Generate Score Sheet
-                            </button>
-                        </div>
-                        <div class="entries-list" id="entries_${roundKey}" data-round-key="${roundKey}">
-                            ${round.entries.map((entry, index) => `
-                                <div class="entry-item entry-type-${entry.entryType}" data-entry-id="${entry.id}">
-                                    <span class="entry-text">${entry.handlerName} - ${entry.dogCallName}</span>
-                                    <div class="entry-controls">
-                                        <button onclick="moveEntryUp('${roundKey}', ${index})" title="Move Up">↑</button>
-                                        <button onclick="moveEntryDown('${roundKey}', ${index})" title="Move Down">↓</button>
-                                    </div>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                `;
-            });
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    });
 
-            roundsGrid.innerHTML = html;
+    roundsGrid.innerHTML = html;
 
-            Object.keys(dayData.rounds).forEach(roundKey => {
-                const entriesList = document.getElementById(`entries_${roundKey}`);
-                if (entriesList) {
-                    new Sortable(entriesList, {
-                        animation: 150,
-                        ghostClass: 'sortable-ghost',
-                        dragClass: 'sortable-drag',
-                        onEnd: function (evt) {
-                            handleDragEnd(roundKey, evt.oldIndex, evt.newIndex);
-                        }
-                    });
+    Object.keys(dayData.rounds).forEach(roundKey => {
+        const entriesList = document.getElementById(`entries_${roundKey}`);
+        if (entriesList) {
+            new Sortable(entriesList, {
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                dragClass: 'sortable-drag',
+                onEnd: function (evt) {
+                    handleDragEnd(roundKey, evt.oldIndex, evt.newIndex);
                 }
             });
         }
+    });
+}
 
-        // Handle drag and drop end
-        function handleDragEnd(roundKey, oldIndex, newIndex) {
-            if (oldIndex !== newIndex) {
-                const dayData = runningOrderData[currentDay];
-                const entries = dayData.rounds[roundKey].entries;
-                const movedEntry = entries.splice(oldIndex, 1)[0];
-                entries.splice(newIndex, 0, movedEntry);
-                
-                console.log(`Moved entry from position ${oldIndex} to ${newIndex} in round ${roundKey}`);
-                showStatus('Entry order updated', 'success');
-            }
-        }
+// Handle drag and drop end
+function handleDragEnd(roundKey, oldIndex, newIndex) {
+    if (oldIndex !== newIndex) {
+        const dayData = runningOrderData[currentDay];
+        const entries = dayData.rounds[roundKey].entries;
+        const movedEntry = entries.splice(oldIndex, 1)[0];
+        entries.splice(newIndex, 0, movedEntry);
+        
+        console.log(`Moved entry from position ${oldIndex} to ${newIndex} in round ${roundKey}`);
+        showStatus('Entry order updated', 'success');
+    }
+}
 
-        // Move entry up
-        function moveEntryUp(roundKey, index) {
-            if (index > 0) {
-                const dayData = runningOrderData[currentDay];
-                const entries = dayData.rounds[roundKey].entries;
-                [entries[index - 1], entries[index]] = [entries[index], entries[index - 1]];
-                renderRunningOrder();
-                showStatus('Entry moved up', 'success');
-            }
-        }
+// Move entry up
+function moveEntryUp(roundKey, index) {
+    if (index > 0) {
+        const dayData = runningOrderData[currentDay];
+        const entries = dayData.rounds[roundKey].entries;
+        [entries[index - 1], entries[index]] = [entries[index], entries[index - 1]];
+        renderRunningOrder();
+        showStatus('Entry moved up', 'success');
+    }
+}
 
-        // Move entry down
-        function moveEntryDown(roundKey, index) {
-            const dayData = runningOrderData[currentDay];
+// Move entry down
+function moveEntryDown(roundKey, index) {
+    const dayData = runningOrderData[currentDay];
+    const entries = dayData.rounds[roundKey].entries;
+    if (index < entries.length - 1) {
+        [entries[index], entries[index + 1]] = [entries[index + 1], entries[index]];
+        renderRunningOrder();
+        showStatus('Entry moved down', 'success');
+    }
+}
+
+// Randomize running orders for current day
+function randomizeAllOrders() {
+    if (confirm('This will randomize the running order for ALL rounds on the current day. Continue?')) {
+        const dayData = runningOrderData[currentDay];
+        Object.keys(dayData.rounds).forEach(roundKey => {
             const entries = dayData.rounds[roundKey].entries;
-            if (index < entries.length - 1) {
-                [entries[index], entries[index + 1]] = [entries[index + 1], entries[index]];
-                renderRunningOrder();
-                showStatus('Entry moved down', 'success');
+            for (let i = entries.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [entries[i], entries[j]] = [entries[j], entries[i]];
             }
+        });
+        renderRunningOrder();
+        showStatus('Running orders randomized for current day', 'success');
+    }
+}
+
+// Sort alphabetically by handler name for current day
+function sortAlphabetically() {
+    if (confirm('This will sort all entries alphabetically by handler name for the current day. Continue?')) {
+        const dayData = runningOrderData[currentDay];
+        Object.keys(dayData.rounds).forEach(roundKey => {
+            dayData.rounds[roundKey].entries.sort((a, b) => 
+                a.handlerName.localeCompare(b.handlerName)
+            );
+        });
+        renderRunningOrder();
+        showStatus('Entries sorted alphabetically for current day', 'success');
+    }
+}
+
+// Reset to original entry order for current day
+function resetToOriginal() {
+    if (confirm('This will reset all running orders to the original entry order for the current day. Continue?')) {
+        const dayData = runningOrderData[currentDay];
+        const originalDayData = originalOrderData[currentDay];
+        Object.keys(originalDayData.rounds).forEach(roundKey => {
+            if (dayData.rounds[roundKey]) {
+                dayData.rounds[roundKey].entries = [...originalDayData.rounds[roundKey].entries];
+            }
+        });
+        renderRunningOrder();
+        showStatus('Running orders reset to original entry order for current day', 'success');
+    }
+}
+
+// Refresh running order
+function refreshRunningOrder() {
+    loadTrialRunningOrder();
+}
+
+// Save running order to Firebase
+async function saveRunningOrder() {
+    if (!currentTrial) {
+        showStatus('No trial selected', 'error');
+        return;
+    }
+
+    try {
+        showStatus('Saving running order...', 'info');
+
+        const roundOrders = {};
+        Object.keys(runningOrderData).forEach(dayIndex => {
+            const dayData = runningOrderData[dayIndex];
+            Object.keys(dayData.rounds).forEach(roundKey => {
+                roundOrders[roundKey] = dayData.rounds[roundKey].entries.map(entry => entry.id);
+            });
+        });
+
+        await db.collection('running_orders').doc(currentTrial.id).set({
+            trialId: currentTrial.id,
+            trialName: currentTrial.clubName,
+            roundOrders: roundOrders,
+            lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
+            updatedBy: currentUser.uid
+        });
+
+        showStatus('Running order saved successfully!', 'success');
+    } catch (error) {
+        console.error('Error saving running order:', error);
+        showStatus('Error saving running order: ' + error.message, 'error');
+    }
+}
+
+// Export running order to Excel
+async function exportRunningOrder() {
+    if (!currentTrial || Object.keys(runningOrderData).length === 0) {
+        showStatus('No running order data to export', 'error');
+        return;
+    }
+
+    try {
+        showStatus('Preparing Excel export...', 'info');
+
+        const dayData = runningOrderData[currentDay];
+        if (!dayData) {
+            showStatus('No data for current day', 'error');
+            return;
         }
 
-        // Randomize running orders for current day
-        function randomizeAllOrders() {
-            if (confirm('This will randomize the running order for ALL rounds on the current day. Continue?')) {
-                const dayData = runningOrderData[currentDay];
-                Object.keys(dayData.rounds).forEach(roundKey => {
-                    const entries = dayData.rounds[roundKey].entries;
-                    for (let i = entries.length - 1; i > 0; i--) {
-                        const j = Math.floor(Math.random() * (i + 1));
-                        [entries[i], entries[j]] = [entries[j], entries[i]];
-                    }
-                });
-                renderRunningOrder();
-                showStatus('Running orders randomized for current day', 'success');
-            }
+        let csvContent = "data:text/csv;charset=utf-8,";
+        
+        const rounds = Object.values(dayData.rounds);
+        const maxEntries = Math.max(...rounds.map(r => r.entries.length));
+        
+        csvContent += rounds.map(round => 
+            `"${dayData.date ? createLocalDate(dayData.date).toLocaleDateString() : 'Date TBD'}"`
+        ).join(',') + '\n';
+        
+        csvContent += rounds.map(round => 
+            `"${round.judgeName}"`
+        ).join(',') + '\n';
+        
+        csvContent += rounds.map(round => 
+            `"${round.className} Round ${round.roundNumber}"`
+        ).join(',') + '\n';
+
+        for (let i = 0; i < maxEntries; i++) {
+            csvContent += rounds.map(round => 
+                round.entries[i] ? `"${round.entries[i].handlerName} - ${round.entries[i].dogCallName}"` : '""'
+            ).join(',') + '\n';
         }
 
-        // Sort alphabetically by handler name for current day
-        function sortAlphabetically() {
-            if (confirm('This will sort all entries alphabetically by handler name for the current day. Continue?')) {
-                const dayData = runningOrderData[currentDay];
-                Object.keys(dayData.rounds).forEach(roundKey => {
-                    dayData.rounds[roundKey].entries.sort((a, b) => 
-                        a.handlerName.localeCompare(b.handlerName)
-                    );
-                });
-                renderRunningOrder();
-                showStatus('Entries sorted alphabetically for current day', 'success');
-            }
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        
+        const dayDate = dayData.date ? createLocalDate(dayData.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : `Day-${dayData.dayNumber}`;
+        link.setAttribute("download", `running-order-${currentTrial.clubName.replace(/\s+/g, '-')}-${dayDate}.csv`);
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        showStatus('Running order exported successfully!', 'success');
+    } catch (error) {
+        console.error('Error exporting running order:', error);
+        showStatus('Error exporting running order: ' + error.message, 'error');
+    }
+}
+
+// ========================================
+// SCORE SHEET GENERATION FUNCTIONS
+// ========================================
+
+// Generate score sheet for a specific round
+async function generateRoundScoreSheet(roundKey) {
+    try {
+        showStatus('Generating score sheet...', 'info');
+        
+        const dayData = runningOrderData[currentDay];
+        const round = dayData.rounds[roundKey];
+        
+        if (!round || round.entries.length === 0) {
+            showStatus('No entries found for this round', 'error');
+            return;
         }
 
-        // Reset to original entry order for current day
-        function resetToOriginal() {
-            if (confirm('This will reset all running orders to the original entry order for the current day. Continue?')) {
-                const dayData = runningOrderData[currentDay];
-                const originalDayData = originalOrderData[currentDay];
-                Object.keys(originalDayData.rounds).forEach(roundKey => {
-                    if (dayData.rounds[roundKey]) {
-                        dayData.rounds[roundKey].entries = [...originalDayData.rounds[roundKey].entries];
-                    }
-                });
-                renderRunningOrder();
-                showStatus('Running orders reset to original entry order for current day', 'success');
-            }
+        const pdfDoc = await PDFLib.PDFDocument.create();
+        const page = pdfDoc.addPage([612, 792]); // US Letter size
+        
+        await createScoreSheetPage(pdfDoc, page, round, dayData);
+        
+        const pdfBytes = await pdfDoc.save();
+        downloadPDF(pdfBytes, `${round.className}_Round${round.roundNumber}_ScoreSheet.pdf`);
+        
+        showStatus('Score sheet generated successfully!', 'success');
+    } catch (error) {
+        console.error('Error generating score sheet:', error);
+        showStatus('Error generating score sheet: ' + error.message, 'error');
+    }
+}
+
+// Generate all score sheets for current day
+async function generateAllScoreSheets() {
+    try {
+        showStatus('Generating all score sheets for current day...', 'info');
+        
+        const dayData = runningOrderData[currentDay];
+        const rounds = Object.values(dayData.rounds).filter(round => round.entries.length > 0);
+        
+        if (rounds.length === 0) {
+            showStatus('No rounds with entries found for current day', 'error');
+            return;
         }
 
-        // Refresh running order
-        function refreshRunningOrder() {
-            loadTrialRunningOrder();
+        const pdfDoc = await PDFLib.PDFDocument.create();
+        
+        for (const round of rounds) {
+            const page = pdfDoc.addPage([612, 792]);
+            await createScoreSheetPage(pdfDoc, page, round, dayData);
         }
+        
+        const pdfBytes = await pdfDoc.save();
+        const dayDate = dayData.date ? createLocalDate(dayData.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : `Day-${dayData.dayNumber}`;
+        downloadPDF(pdfBytes, `${currentTrial.clubName}_${dayDate}_ScoreSheets.pdf`);
+        
+        showStatus(`Generated ${rounds.length} score sheets successfully!`, 'success');
+    } catch (error) {
+        console.error('Error generating score sheets:', error);
+        showStatus('Error generating score sheets: ' + error.message, 'error');
+    }
+}
 
-        // Save running order to Firebase
-        async function saveRunningOrder() {
-            if (!currentTrial) {
-                showStatus('No trial selected', 'error');
-                return;
-            }
-
-            try {
-                showStatus('Saving running order...', 'info');
-
-                const roundOrders = {};
-                Object.keys(runningOrderData).forEach(dayIndex => {
-                    const dayData = runningOrderData[dayIndex];
-                    Object.keys(dayData.rounds).forEach(roundKey => {
-                        roundOrders[roundKey] = dayData.rounds[roundKey].entries.map(entry => entry.id);
-                    });
-                });
-
-                await db.collection('running_orders').doc(currentTrial.id).set({
-                    trialId: currentTrial.id,
-                    trialName: currentTrial.clubName,
-                    roundOrders: roundOrders,
-                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
-                    updatedBy: currentUser.uid
-                });
-
-                showStatus('Running order saved successfully!', 'success');
-            } catch (error) {
-                console.error('Error saving running order:', error);
-                showStatus('Error saving running order: ' + error.message, 'error');
-            }
-        }
-
-        // Export running order to Excel
-        async function exportRunningOrder() {
-            if (!currentTrial || Object.keys(runningOrderData).length === 0) {
-                showStatus('No running order data to export', 'error');
-                return;
-            }
-
-            try {
-                showStatus('Preparing Excel export...', 'info');
-
-                const dayData = runningOrderData[currentDay];
-                if (!dayData) {
-                    showStatus('No data for current day', 'error');
-                    return;
-                }
-
-                let csvContent = "data:text/csv;charset=utf-8,";
-                
-                const rounds = Object.values(dayData.rounds);
-                const maxEntries = Math.max(...rounds.map(r => r.entries.length));
-                
-                csvContent += rounds.map(round => 
-                    `"${dayData.date ? createLocalDate(dayData.date).toLocaleDateString() : 'Date TBD'}"`
-                ).join(',') + '\n';
-                
-                csvContent += rounds.map(round => 
-                    `"${round.judgeName}"`
-                ).join(',') + '\n';
-                
-                csvContent += rounds.map(round => 
-                    `"${round.className} Round ${round.roundNumber}"`
-                ).join(',') + '\n';
-
-                for (let i = 0; i < maxEntries; i++) {
-                    csvContent += rounds.map(round => 
-                        round.entries[i] ? `"${round.entries[i].handlerName} - ${round.entries[i].dogCallName}"` : '""'
-                    ).join(',') + '\n';
-                }
-
-                const encodedUri = encodeURI(csvContent);
-                const link = document.createElement("a");
-                link.setAttribute("href", encodedUri);
-                
-                const dayDate = dayData.date ? createLocalDate(dayData.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : `Day-${dayData.dayNumber}`;
-                link.setAttribute("download", `running-order-${currentTrial.clubName.replace(/\s+/g, '-')}-${dayDate}.csv`);
-                
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-
-                showStatus('Running order exported successfully!', 'success');
-            } catch (error) {
-                console.error('Error exporting running order:', error);
-                showStatus('Error exporting running order: ' + error.message, 'error');
-            }
-        }
-
-        // ========================================
-        // SCORE SHEET GENERATION FUNCTIONS
-        // ========================================
-
-        // Generate score sheet for a specific round
-        async function generateRoundScoreSheet(roundKey) {
-            try {
-                showStatus('Generating score sheet...', 'info');
-                
-                const dayData = runningOrderData[currentDay];
-                const round = dayData.rounds[roundKey];
-                
-                if (!round || round.entries.length === 0) {
-                    showStatus('No entries found for this round', 'error');
-                    return;
-                }
-
-                const pdfDoc = await PDFLib.PDFDocument.create();
-                const page = pdfDoc.addPage([612, 792]); // US Letter size
-                
-                await createScoreSheetPage(pdfDoc, page, round, dayData);
-                
-                const pdfBytes = await pdfDoc.save();
-                downloadPDF(pdfBytes, `${round.className}_Round${round.roundNumber}_ScoreSheet.pdf`);
-                
-                showStatus('Score sheet generated successfully!', 'success');
-            } catch (error) {
-                console.error('Error generating score sheet:', error);
-                showStatus('Error generating score sheet: ' + error.message, 'error');
-            }
-        }
-
-        // Generate all score sheets for current day
-        async function generateAllScoreSheets() {
-            try {
-                showStatus('Generating all score sheets for current day...', 'info');
-                
-                const dayData = runningOrderData[currentDay];
-                const rounds = Object.values(dayData.rounds).filter(round => round.entries.length > 0);
-                
-                if (rounds.length === 0) {
-                    showStatus('No rounds with entries found for current day', 'error');
-                    return;
-                }
-
-                const pdfDoc = await PDFLib.PDFDocument.create();
-                
-                for (const round of rounds) {
-                    const page = pdfDoc.addPage([612, 792]);
-                    await createScoreSheetPage(pdfDoc, page, round, dayData);
-                }
-                
-                const pdfBytes = await pdfDoc.save();
-                const dayDate = dayData.date ? createLocalDate(dayData.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : `Day-${dayData.dayNumber}`;
-                downloadPDF(pdfBytes, `${currentTrial.clubName}_${dayDate}_ScoreSheets.pdf`);
-                
-                showStatus(`Generated ${rounds.length} score sheets successfully!`, 'success');
-            } catch (error) {
-                console.error('Error generating score sheets:', error);
-                showStatus('Error generating score sheets: ' + error.message, 'error');
-            }
-        }
-
-       // UPDATED createScoreSheetPage function - replace existing one in running-order.html
+// Create score sheet page
 async function createScoreSheetPage(pdfDoc, page, round, dayData) {
     const { width, height } = page.getSize();
     const font = await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
@@ -1736,63 +1721,62 @@ async function createScoreSheetPage(pdfDoc, page, round, dayData) {
     });
 }
 
+// Preview score sheet format
+async function previewScoreSheet() {
+    try {
+        showStatus('Generating preview...', 'info');
+        
+        // Create a sample round for preview
+        const sampleRound = {
+            className: 'Sample Class',
+            roundNumber: 1,
+            judgeName: 'Sample Judge',
+            entries: [
+                { handlerName: 'John', dogCallName: 'Buddy', entryType: 'regular' },
+                { handlerName: 'Jane', dogCallName: 'Luna', entryType: 'regular' },
+                { handlerName: 'Bob', dogCallName: 'Max', entryType: 'feo' }
+            ]
+        };
 
-        // Preview score sheet format
-        async function previewScoreSheet() {
-            try {
-                showStatus('Generating preview...', 'info');
-                
-                // Create a sample round for preview
-                const sampleRound = {
-                    className: 'Sample Class',
-                    roundNumber: 1,
-                    judgeName: 'Sample Judge',
-                    entries: [
-                        { handlerName: 'John', dogCallName: 'Buddy', entryType: 'regular' },
-                        { handlerName: 'Jane', dogCallName: 'Luna', entryType: 'regular' },
-                        { handlerName: 'Bob', dogCallName: 'Max', entryType: 'feo' }
-                    ]
-                };
+        const sampleDay = {
+            date: formatLocalDate(new Date())
+        };
 
-                const sampleDay = {
-                    date: formatLocalDate(new Date())
-                };
+        const pdfDoc = await PDFLib.PDFDocument.create();
+        const page = pdfDoc.addPage([612, 792]);
+        
+        await createScoreSheetPage(pdfDoc, page, sampleRound, sampleDay);
+        
+        const pdfBytes = await pdfDoc.save();
+        downloadPDF(pdfBytes, 'ScoreSheet_Preview.pdf');
+        
+        showStatus('Preview generated successfully!', 'success');
+    } catch (error) {
+        console.error('Error generating preview:', error);
+        showStatus('Error generating preview: ' + error.message, 'error');
+    }
+}
 
-                const pdfDoc = await PDFLib.PDFDocument.create();
-                const page = pdfDoc.addPage([612, 792]);
-                
-                await createScoreSheetPage(pdfDoc, page, sampleRound, sampleDay);
-                
-                const pdfBytes = await pdfDoc.save();
-                downloadPDF(pdfBytes, 'ScoreSheet_Preview.pdf');
-                
-                showStatus('Preview generated successfully!', 'success');
-            } catch (error) {
-                console.error('Error generating preview:', error);
-                showStatus('Error generating preview: ' + error.message, 'error');
-            }
-        }
+// Download PDF helper function
+function downloadPDF(pdfBytes, filename) {
+    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+}
 
-        // Download PDF helper function
-        function downloadPDF(pdfBytes, filename) {
-            const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = filename;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-        }
+// Initialize when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, initializing enhanced running order management...');
+    init();
+});
 
-        // Initialize when page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('DOM loaded, initializing enhanced running order management...');
-            init();
-        });
-
-        console.log('Enhanced Running Order Management with Score Sheets script loaded successfully');
+console.log('Enhanced Running Order Management with Score Sheets script loaded successfully');
     </script>
 </body>
 </html>
