@@ -1781,47 +1781,34 @@
 
         function populateParticipantInfo(registration) {
             console.log("📝 Registration data found:", registration);
-            
-            // Debug: log all fields to see what's available
             console.log("Available registration fields:", Object.keys(registration));
             
-            // Try multiple possible field combinations to get the right data
+            // Based on your Excel structure:
+            // Column A: cwagsNumber
+            // Column B: dogCallName  
+            // Column C: handlerName
+            
             let handlerName = '';
             let dogCallName = '';
             
-            // Strategy 1: Try standard field names
+            // Use the correct field mapping from your Excel structure
             if (registration.handlerName && registration.dogCallName) {
+                // Standard case - fields are correctly named
                 handlerName = registration.handlerName;
                 dogCallName = registration.dogCallName;
-            }
-            // Strategy 2: Try alternative field names
-            else if (registration.handler && registration.dog) {
+            } else if (registration.handler && registration.dog) {
+                // Alternative field names
                 handlerName = registration.handler;
                 dogCallName = registration.dog;
-            }
-            // Strategy 3: Check if the fields are swapped in the database
-            else if (registration.dogCallName && registration.handlerName) {
-                // Sometimes the data might be stored with swapped meanings
-                // Check if what's labeled as "handlerName" is actually a dog name pattern
-                const supposedHandler = registration.handlerName;
-                const supposedDog = registration.dogCallName;
-                
-                // Simple heuristic: dog names are often shorter and less likely to contain spaces
-                // or if the "handler" field looks like a dog name pattern
-                if (supposedHandler.split(' ').length === 1 && supposedDog.split(' ').length >= 2) {
-                    // Likely swapped
-                    handlerName = supposedDog;
-                    dogCallName = supposedHandler;
-                    console.log("🔄 Detected swapped fields, correcting...");
-                } else {
-                    handlerName = supposedHandler;
-                    dogCallName = supposedDog;
-                }
+            } else {
+                // Try other possible field variations
+                handlerName = registration.handlerName || registration.handler || registration.Handler || '';
+                dogCallName = registration.dogCallName || registration.dog || registration.Dog || registration.dogName || '';
             }
             
-            console.log(`📝 Final assignment: Handler="${handlerName}", Dog="${dogCallName}"`);
+            console.log(`📝 Extracted: Handler="${handlerName}", Dog="${dogCallName}"`);
             
-            // Populate the form
+            // Populate the form with correct field assignments
             const handlerField = document.getElementById('handlerNameInput');
             const dogField = document.getElementById('dogCallNameInput');
             
@@ -1831,13 +1818,15 @@
                 handlerField.readOnly = true;
                 dogField.readOnly = true;
                 
-                // Highlight the fields to show they were auto-filled
+                // Visual feedback
                 handlerField.style.background = '#e7f3ff';
                 dogField.style.background = '#e7f3ff';
                 setTimeout(() => {
                     handlerField.style.background = '';
                     dogField.style.background = '';
                 }, 3000);
+                
+                console.log(`✅ Form populated: Handler input="${handlerField.value}", Dog input="${dogField.value}"`);
             }
         }
 
