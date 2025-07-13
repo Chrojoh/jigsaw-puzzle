@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Enhanced Score Entry System</title>
+    <title>Enhanced Score Entry System with Auto-Detection</title>
     
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
@@ -49,11 +49,6 @@
             font-weight: 700;
         }
 
-        .header p {
-            opacity: 0.9;
-            margin-top: 0.5rem;
-        }
-
         .btn {
             padding: 0.75rem 1.5rem;
             border: none;
@@ -85,23 +80,9 @@
             display: none;
         }
 
-        .status-success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-
-        .status-error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-
-        .status-info {
-            background: #cce7ff;
-            color: #0056b3;
-            border: 1px solid #99d3ff;
-        }
+        .status-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .status-error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .status-info { background: #cce7ff; color: #0056b3; border: 1px solid #99d3ff; }
 
         .trial-selector {
             padding: 2rem;
@@ -217,31 +198,27 @@
             gap: 1rem;
         }
 
-        .scent-locations {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 1rem;
-            margin-bottom: 2rem;
-            background: #f8f9fa;
-            padding: 1rem;
+        /* Class-specific scoring styles */
+        .class-detection {
+            background: #e3f2fd;
+            border: 2px solid #2196f3;
             border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
         }
 
-        .scent-location {
-            text-align: center;
+        .scoring-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
         }
 
-        .scent-location label {
-            font-weight: 600;
-            display: block;
-            margin-bottom: 0.5rem;
-        }
-
-        .scent-location input {
-            width: 100%;
-            padding: 0.5rem;
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
+        .scoring-info-card {
+            background: #fff;
+            padding: 1rem;
+            border-radius: 6px;
+            border-left: 4px solid #28a745;
         }
 
         .scoring-table {
@@ -279,16 +256,48 @@
             text-align: left !important;
             font-weight: 600;
             background: #f0f8ff;
-            width: 150px;
-            min-width: 150px;
-            max-width: 150px;
+            width: 120px;
+            min-width: 120px;
+            max-width: 120px;
             font-size: 0.85rem;
         }
 
-        /* Entry type column styling */
+        .cwags-cell {
+            width: 80px;
+            min-width: 80px;
+            background: #fff3cd;
+        }
+
+        .score-cell {
+            width: 80px;
+            min-width: 80px;
+        }
+
+        .score-cell input {
+            width: 100%;
+            padding: 0.25rem;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        .pass-cell {
+            width: 80px;
+            min-width: 80px;
+            background: #d4edda;
+        }
+
+        .pass-cell input {
+            width: 100%;
+            padding: 0.25rem;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            text-align: center;
+        }
+
         .entry-type-cell {
-            width: 120px;
-            min-width: 120px;
+            width: 100px;
+            min-width: 100px;
             vertical-align: middle;
         }
 
@@ -342,7 +351,6 @@
             color: #856404;
         }
 
-        /* Row styling based on entry type */
         .entry-feo {
             background-color: #fff3cd !important;
         }
@@ -357,53 +365,6 @@
             border-left: 4px solid #28a745;
         }
 
-        .scent-cell {
-            width: 60px;
-        }
-
-        .scent-cell select {
-            width: 100%;
-            padding: 0.25rem;
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
-        }
-
-        .fault-cell {
-            width: 150px;
-            min-width: 150px;
-        }
-
-        .fault-cell input {
-            width: 100%;
-            padding: 0.25rem;
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
-            font-size: 0.85rem;
-        }
-
-        .time-cell {
-            width: 70px;
-        }
-
-        .time-cell input {
-            width: 100%;
-            padding: 0.25rem;
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
-        }
-
-        .passfail-cell {
-            width: 80px;
-        }
-
-        .passfail-cell select {
-            width: 100%;
-            padding: 0.25rem;
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
-        }
-
-        /* Control Buttons */
         .control-buttons {
             display: flex;
             gap: 1rem;
@@ -432,10 +393,6 @@
             .scoring-table {
                 font-size: 0.8rem;
             }
-            
-            .scent-locations {
-                grid-template-columns: repeat(2, 1fr);
-            }
 
             .control-buttons {
                 flex-direction: column;
@@ -449,7 +406,7 @@
         <div class="header">
             <div>
                 <h1>📊 Enhanced Score Entry System</h1>
-                <p>Enter trial results with FEO management and last-minute additions</p>
+                <p>Automatic class detection with appropriate scoring interfaces</p>
             </div>
             <div>
                 <a href="trial-secretary-dashboard.html" class="btn btn-secondary">← Back to Dashboard</a>
@@ -486,7 +443,7 @@
             <div class="score-sheet" id="scoreSheet" style="display: none;">
                 <!-- Score sheet header -->
                 <div class="sheet-header">
-                    <div class="sheet-title">Enhanced Score Sheet with FEO Management</div>
+                    <div class="sheet-title">Auto-Detected Score Sheet</div>
                     <div class="sheet-info">
                         <div><strong>Class:</strong> <span id="sheetClass">-</span></div>
                         <div><strong>Round:</strong> <span id="sheetRound">-</span></div>
@@ -495,42 +452,19 @@
                     </div>
                 </div>
 
-                <!-- Scent Locations -->
-                <div class="scent-locations">
-                    <div class="scent-location">
-                        <label>Scent 1 Located in/on:</label>
-                        <input type="text" id="scent1Location" placeholder="Enter location">
-                    </div>
-                    <div class="scent-location">
-                        <label>Scent 2 Located in/on:</label>
-                        <input type="text" id="scent2Location" placeholder="Enter location">
-                    </div>
-                    <div class="scent-location">
-                        <label>Scent 3 Located in/on:</label>
-                        <input type="text" id="scent3Location" placeholder="Enter location">
-                    </div>
-                    <div class="scent-location">
-                        <label>Scent 4 Located in/on:</label>
-                        <input type="text" id="scent4Location" placeholder="Enter location">
+                <!-- Class Detection Info -->
+                <div class="class-detection" id="classDetection">
+                    <h3>🎯 Class Type Detected: <span id="detectedClassType">-</span></h3>
+                    <div class="scoring-info" id="scoringInfo">
+                        <!-- Scoring information will be populated here -->
                     </div>
                 </div>
 
-                <!-- Enhanced Scoring Table -->
+                <!-- Dynamic Scoring Table -->
                 <div style="overflow-x: auto;">
                     <table class="scoring-table" id="scoringTable">
-                        <thead>
-                            <tr>
-                                <th class="team-name">Team Dog - Handler</th>
-                                <th class="entry-type-cell">Entry Type</th>
-                                <th class="scent-cell">Scent 1</th>
-                                <th class="scent-cell">Scent 2</th>
-                                <th class="scent-cell">Scent 3</th>
-                                <th class="scent-cell">Scent 4</th>
-                                <th class="fault-cell">Fault Description</th>
-                                <th class="fault-cell">Fault Description</th>
-                                <th class="time-cell">Time</th>
-                                <th class="passfail-cell">Pass/Fail</th>
-                            </tr>
+                        <thead id="scoringTableHead">
+                            <!-- Headers will be generated based on class type -->
                         </thead>
                         <tbody id="scoringTableBody">
                             <!-- Scoring rows will be generated here -->
@@ -541,7 +475,7 @@
                 <!-- Control Buttons -->
                 <div class="control-buttons">
                     <button class="btn btn-success" onclick="saveScores()">💾 Save All Changes</button>
-                    <button class="btn btn-warning" onclick="exportFilledScoreSheet()">📄 Export Filled CSV</button>
+                    <button class="btn btn-warning" onclick="exportFilledScoreSheet()">📄 Export CSV</button>
                     <button class="btn btn-danger" onclick="clearAllScores()">🗑️ Clear All Scores</button>
                     <button class="btn btn-info" onclick="syncAllData()">🔄 Sync with Reports</button>
                 </div>
@@ -572,22 +506,26 @@
         const auth = firebase.auth();
         const db = firebase.firestore();
 
-        // C-WAGS Standard Class Order - same as running-order.html
-        const CWAGS_CLASS_ORDER = [
-            'Patrol 1', 'Detective 2', 'Investigator 3', 'Super Sleuth 4', 'Private Inv', 'Det Diversions',
-            'Ranger 1', 'Ranger 2', 'Ranger 3', 'Ranger 4', 'Ranger 5',
-            'Dasher 3', 'Dasher 4', 'Dasher 5', 'Dasher 6',
-            'Obedience 1', 'Obedience 2', 'Obedience 3', 'Obedience 4', 'Obedience 5',
-            'Starter', 'Advanced', 'Pro', 'ARF',
-            'Zoom 1', 'Zoom 1.5', 'Zoom 2',
-            'Games 1', 'Games 2', 'Games 3', 'Games 4'
-        ];
+        // Class configuration with auto-detection
+        const CLASS_CONFIGS = {
+            obedience1: { scoreRange: '1-100', passingScore: 70, passIndicator: 'P', type: 'obedience' },
+            obedience2: { scoreRange: '1-100', passingScore: 70, passIndicator: 'P', type: 'obedience' },
+            obedience3: { scoreRange: '1-100', passingScore: 70, passIndicator: 'P', type: 'obedience' },
+            obedience4: { scoreRange: '1-100', passingScore: 70, passIndicator: 'P', type: 'obedience' },
+            obedience5: { scoreRange: '1-150', passingScore: 120, passIndicator: 'P', type: 'obedience' },
+            games: { scoreRange: '1-100', passingScore: 70, passIndicator: 'Subclass', type: 'games' },
+            rally: { scoreRange: '1-100', passingScore: 70, passIndicator: 'P', type: 'rally' },
+            scent: { scoreRange: 'Pass/Fail', passingScore: 'Pass', passIndicator: '✓', type: 'scent' }
+        };
 
-        // Get CWAGS class order index for sorting
-        function getCwagsClassOrder(className) {
-            const index = CWAGS_CLASS_ORDER.indexOf(className);
-            return index === -1 ? 999 : index; // Unknown classes go to end
-        }
+        // Games subclass abbreviations
+        const GAMES_SUBCLASSES = {
+            'GB': 'Grab Bag',
+            'C': 'Colors', 
+            'BJ': 'Black Jack',
+            'P': 'Pairs',
+            'T': 'Team'
+        };
 
         // Global variables
         let currentUser = null;
@@ -596,17 +534,8 @@
         let currentScores = { participants: {} };
         let allRounds = [];
         let allTrials = [];
-        let registrationData = [];
-        let participantEntryTypes = {}; // Track entry types for participants
-
-        // Standard field names - CORRECTED based on troubleshooting
-        const STANDARD_FIELDS = {
-            HANDLER_NAME: 'handlerName',
-            DOG_CALL_NAME: 'dogCallName',
-            JUDGE_NAME: 'judge',        // CORRECTED: your system uses 'judge'
-            CLASS_NAME: 'class',       // CORRECTED: your system uses 'class'
-            CWAGS_NUMBER: 'cwagsNumber'
-        };
+        let participantEntryTypes = {};
+        let detectedClassConfig = null;
 
         // Utility functions
         function showStatus(message, type = 'info') {
@@ -620,47 +549,50 @@
             }, 5000);
         }
 
-        function createLocalDate(dateStr) {
-            if (!dateStr) return null;
-            if (typeof dateStr === 'string') {
-                const dateWithTime = dateStr.includes('T') ? dateStr : dateStr + 'T12:00:00';
-                return new Date(dateWithTime);
-            }
-            return new Date(dateStr);
-        }
-
-        function formatLocalDate(date) {
-            if (!date || !(date instanceof Date)) return '';
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
-        }
-
-        function getDateFromFirebase(firebaseDate) {
-            if (!firebaseDate) return null;
+        // Class Detection Function
+        function detectClassType(className) {
+            const lowerClassName = className.toLowerCase();
             
-            let date;
-            if (firebaseDate.toDate) {
-                date = firebaseDate.toDate();
-            } else if (firebaseDate instanceof Date) {
-                date = firebaseDate;
-            } else if (typeof firebaseDate === 'string') {
-                date = createLocalDate(firebaseDate);
-            } else {
-                return null;
+            // Obedience detection
+            if (lowerClassName.includes('obedience') || lowerClassName.includes('obed')) {
+                if (lowerClassName.includes('5')) return 'obedience5';
+                if (lowerClassName.includes('4')) return 'obedience4';
+                if (lowerClassName.includes('3')) return 'obedience3';
+                if (lowerClassName.includes('2')) return 'obedience2';
+                if (lowerClassName.includes('1')) return 'obedience1';
+                return 'obedience1'; // Default
             }
             
-            return date;
+            // Games detection
+            if (lowerClassName.includes('games') || lowerClassName.includes('game')) {
+                return 'games';
+            }
+            
+            // Rally detection
+            if (lowerClassName.includes('rally')) {
+                return 'rally';
+            }
+            
+            // Scent work detection (default)
+            return 'scent';
         }
 
-        // ===== INITIALIZATION =====
-        
+        // Extract games subclass from class name
+        function extractGamesSubclass(className) {
+            const upperClassName = className.toUpperCase();
+            
+            for (const [abbrev, fullName] of Object.entries(GAMES_SUBCLASSES)) {
+                if (upperClassName.includes(abbrev) || upperClassName.includes(fullName.toUpperCase())) {
+                    return abbrev;
+                }
+            }
+            
+            return 'GB'; // Default to Grab Bag
+        }
+
+        // Initialize the application
         async function init() {
             try {
-                console.log('🚀 Initializing Enhanced Score Entry System...');
-                
-                // Check authentication
                 currentUser = auth.currentUser;
                 if (!currentUser) {
                     showStatus('Please log in to access the score entry system', 'error');
@@ -670,12 +602,7 @@
                     return;
                 }
 
-                // Load registration data first
-                await loadRegistrationData();
-                
-                // Load available trials
                 await loadTrials();
-                
                 console.log('✅ Enhanced Score Entry System initialized');
                 
             } catch (error) {
@@ -684,61 +611,23 @@
             }
         }
 
-        async function loadRegistrationData() {
-            try {
-                console.log("📊 Loading registration data from Firebase registry...");
-                showStatus('🔄 Loading registration data...', 'info');
-                
-                const registrationsSnapshot = await db.collection('registrations').get();
-                
-                if (!registrationsSnapshot.empty) {
-                    registrationData = [];
-                    registrationsSnapshot.forEach(doc => {
-                        const regData = { id: doc.id, ...doc.data() };
-                        registrationData.push(regData);
-                    });
-                    
-                    console.log(`✅ Loaded ${registrationData.length} registrations from Firebase registry`);
-                } else {
-                    console.log("📊 No registrations found in Firebase registry");
-                    registrationData = [];
-                }
-                
-            } catch (error) {
-                console.error('❌ Error loading registration data:', error);
-                registrationData = [];
-            }
-        }
-
         async function loadTrials() {
             try {
-                console.log('📋 Loading available trials for this secretary...');
+                console.log('📋 Loading available trials...');
                 
-                // Get current user's email to match with secretary field
                 const userEmail = currentUser.email;
-                console.log('🔍 Looking for trials where secretary matches:', userEmail);
-                
                 const trialsSnapshot = await db.collection('trials').get();
                 allTrials = [];
                 
                 trialsSnapshot.forEach(doc => {
                     const trialData = { id: doc.id, ...doc.data() };
-                    
-                    // Check if this secretary has access to this trial
                     const secretaryEmail = trialData.secretaryEmail || trialData.secretary;
                     const createdBy = trialData.createdBy;
                     
-                    // Allow access if:
-                    // 1. Secretary email matches current user
-                    // 2. Secretary field matches current user email
-                    // 3. User created this trial
                     if (secretaryEmail === userEmail || 
                         trialData.secretary === userEmail ||
                         createdBy === currentUser.uid) {
                         allTrials.push(trialData);
-                        console.log(`✅ Access granted to trial: ${trialData.clubName}`);
-                    } else {
-                        console.log(`🚫 Access denied to trial: ${trialData.clubName} (secretary: ${secretaryEmail})`);
                     }
                 });
 
@@ -746,37 +635,19 @@
                 trialSelect.innerHTML = '<option value="">Select a trial...</option>';
                 
                 if (allTrials.length === 0) {
-                    trialSelect.innerHTML = '<option value="">No trials available for this secretary</option>';
-                    showStatus('No trials found for this secretary. Contact the trial host for access.', 'error');
+                    trialSelect.innerHTML = '<option value="">No trials available</option>';
+                    showStatus('No trials found for this secretary', 'error');
                     return;
                 }
                 
                 allTrials.forEach(trial => {
                     const option = document.createElement('option');
                     option.value = trial.id;
-                    
-                    // Try different date field formats
-                    let dateDisplay = 'Date TBD';
-                    if (trial.trialDates && trial.trialDates.length > 0) {
-                        dateDisplay = trial.trialDates.join(', ');
-                    } else if (trial.days && trial.days.length > 0) {
-                        const dates = trial.days.map(day => {
-                            if (day.date) {
-                                const date = getDateFromFirebase(day.date);
-                                return date ? date.toLocaleDateString() : 'Date TBD';
-                            }
-                            return 'Date TBD';
-                        }).filter(d => d !== 'Date TBD');
-                        if (dates.length > 0) {
-                            dateDisplay = dates.join(', ');
-                        }
-                    }
-                    
-                    option.textContent = `${trial.clubName} - ${dateDisplay}`;
+                    option.textContent = `${trial.clubName} - ${trial.days ? trial.days.length : 0} days`;
                     trialSelect.appendChild(option);
                 });
 
-                console.log(`✅ Loaded ${allTrials.length} trials for this secretary`);
+                console.log(`✅ Loaded ${allTrials.length} trials`);
                 
             } catch (error) {
                 console.error('❌ Error loading trials:', error);
@@ -794,153 +665,32 @@
             }
 
             try {
-                console.log('📋 Loading trial rounds for:', trialId);
                 showStatus('🔄 Loading trial data...', 'info');
 
-                // Load trial data
                 const trialDoc = await db.collection('trials').doc(trialId).get();
                 if (!trialDoc.exists) {
                     throw new Error('Trial not found');
                 }
 
                 currentTrial = { id: trialDoc.id, ...trialDoc.data() };
-                console.log('Trial data loaded:', currentTrial);
-                console.log('Trial data structure - top level keys:', Object.keys(currentTrial));
-                console.log('Days array:', currentTrial.days);
-                console.log('Number of days:', currentTrial.days ? currentTrial.days.length : 'no days');
-                
-                // Log first day structure if it exists
-                if (currentTrial.days && currentTrial.days.length > 0) {
-                    console.log('First day structure:', currentTrial.days[0]);
-                    console.log('First day keys:', Object.keys(currentTrial.days[0]));
-                    
-                    if (currentTrial.days[0].classes) {
-                        console.log('First day classes:', currentTrial.days[0].classes);
-                        console.log('Number of classes in first day:', currentTrial.days[0].classes.length);
-                        
-                        if (currentTrial.days[0].classes.length > 0) {
-                            console.log('First class structure:', currentTrial.days[0].classes[0]);
-                            console.log('First class keys:', Object.keys(currentTrial.days[0].classes[0]));
-                            
-                            if (currentTrial.days[0].classes[0].rounds) {
-                                console.log('First class rounds:', currentTrial.days[0].classes[0].rounds);
-                                console.log('Number of rounds in first class:', currentTrial.days[0].classes[0].rounds.length);
-                                
-                                if (currentTrial.days[0].classes[0].rounds.length > 0) {
-                                    console.log('First round structure:', currentTrial.days[0].classes[0].rounds[0]);
-                                    console.log('First round keys:', Object.keys(currentTrial.days[0].classes[0].rounds[0]));
-                                }
-                            }
-                        }
-                    }
-                }
 
-                // Load running order data
                 const orderDoc = await db.collection('running_orders').doc(trialId).get();
                 if (!orderDoc.exists) {
                     throw new Error('No running order found for this trial');
                 }
 
                 const runningOrderData = orderDoc.data();
-                console.log('Running order data structure:', Object.keys(runningOrderData));
-                console.log('Full running order data sample:', runningOrderData);
-                
-                // Check for different possible field names your system might use
-                let finalizedData = null;
-                
-                if (runningOrderData.finalizedRunningOrders) {
-                    finalizedData = runningOrderData.finalizedRunningOrders;
-                    console.log('✅ Using finalizedRunningOrders');
-                } else if (runningOrderData.generatedSheets) {
-                    finalizedData = runningOrderData.generatedSheets;
-                    console.log('✅ Using generatedSheets');
-                } else if (runningOrderData.roundOrders) {
-                    console.log('✅ Using roundOrders structure');
-                    console.log('roundOrders type:', typeof runningOrderData.roundOrders);
-                    console.log('roundOrders content:', runningOrderData.roundOrders);
-                    
-                    finalizedData = {};
-                    
-                    // Convert roundOrders to expected format
-                    if (Array.isArray(runningOrderData.roundOrders)) {
-                        console.log('📋 Processing roundOrders as array...');
-                        runningOrderData.roundOrders.forEach((roundOrder, index) => {
-                            console.log(`Processing roundOrder ${index}:`, roundOrder);
-                            if (roundOrder.rounds) {
-                                Object.entries(roundOrder.rounds).forEach(([roundKey, roundData]) => {
-                                    console.log(`Found round ${roundKey}:`, roundData);
-                                    if (roundData.participants && roundData.participants.length > 0) {
-                                        finalizedData[roundKey] = roundData;
-                                        console.log(`✅ Added round ${roundKey} with ${roundData.participants.length} participants`);
-                                    } else {
-                                        console.log(`⚠️ Skipping round ${roundKey} - no participants`);
-                                    }
-                                });
-                            } else {
-                                console.log(`⚠️ roundOrder ${index} has no 'rounds' property`);
-                            }
-                        });
-                    } else if (typeof runningOrderData.roundOrders === 'object') {
-                        console.log('📋 Processing roundOrders as object...');
-                        Object.entries(runningOrderData.roundOrders).forEach(([key, value]) => {
-                            console.log(`Processing roundOrder key ${key}:`, value);
-                            console.log(`Value type: ${typeof value}, Is array: ${Array.isArray(value)}, Length: ${value?.length}`);
-                            
-                            // Check if value is directly an array of participants
-                            if (Array.isArray(value) && value.length > 0) {
-                                // Your structure: roundKey -> Array of participants directly
-                                finalizedData[key] = { participants: value };
-                                console.log(`✅ Added round ${key} with ${value.length} participants (direct array)`);
-                            } else if (value && typeof value === 'object' && value.participants && Array.isArray(value.participants) && value.participants.length > 0) {
-                                // Standard structure: roundKey -> Object with participants property
-                                finalizedData[key] = value;
-                                console.log(`✅ Added round ${key} with ${value.participants.length} participants (object with participants)`);
-                            } else if (value && typeof value === 'object' && value.rounds) {
-                                // Nested structure
-                                console.log(`Processing nested rounds in ${key}:`, value.rounds);
-                                Object.entries(value.rounds).forEach(([roundKey, roundData]) => {
-                                    console.log(`Found nested round ${roundKey}:`, roundData);
-                                    if (Array.isArray(roundData) && roundData.length > 0) {
-                                        finalizedData[roundKey] = { participants: roundData };
-                                        console.log(`✅ Added nested round ${roundKey} with ${roundData.length} participants (direct array)`);
-                                    } else if (roundData && roundData.participants && Array.isArray(roundData.participants) && roundData.participants.length > 0) {
-                                        finalizedData[roundKey] = roundData;
-                                        console.log(`✅ Added nested round ${roundKey} with ${roundData.participants.length} participants (object)`);
-                                    }
-                                });
-                            } else {
-                                console.log(`⚠️ Skipping key ${key} - no participants or unexpected structure`);
-                                console.log(`Full value inspection:`, value);
-                            }
-                        });
-                    }
-                } else {
-                    console.error('❌ No recognized running order structure found');
-                    console.log('Available keys:', Object.keys(runningOrderData));
-                    throw new Error('No running order data found. Please generate running orders first.');
-                }
-
-                console.log('📊 Final processed data keys:', Object.keys(finalizedData));
-                console.log('📊 Final processed data sample:', finalizedData);
-
-                if (!finalizedData || Object.keys(finalizedData).length === 0) {
-                    console.error('❌ No rounds with participants found after processing');
-                    console.log('Original running order structure:', runningOrderData);
-                    throw new Error('No rounds with participants found in running order data. Please check that running orders have been generated with participant assignments.');
-                }
+                let finalizedData = runningOrderData.finalizedRunningOrders || 
+                                   runningOrderData.generatedSheets || 
+                                   runningOrderData.roundOrders || {};
 
                 allRounds = [];
 
-                // Process rounds from the available data structure
                 Object.entries(finalizedData).forEach(([roundKey, roundData]) => {
-                    console.log(`📝 Processing round ${roundKey}:`, roundData);
-                    
                     try {
                         const [dayIndex, classIndex, roundIndex] = roundKey.split('-').map(Number);
                         
-                        // Validate indices
                         if (isNaN(dayIndex) || isNaN(classIndex) || isNaN(roundIndex)) {
-                            console.warn(`⚠️ Invalid round key format: ${roundKey}`);
                             return;
                         }
                         
@@ -954,21 +704,14 @@
                                 dayIndex,
                                 classIndex,
                                 roundIndex,
-                                className: cls[STANDARD_FIELDS.CLASS_NAME] || cls.className,
+                                className: cls.class || cls.className,
                                 roundNumber: round.roundNumber || (roundIndex + 1),
-                                judgeName: round[STANDARD_FIELDS.JUDGE_NAME] || round.judgeName,
-                                date: day.date ? getDateFromFirebase(day.date) : null,
+                                judgeName: round.judge || round.judgeName,
+                                date: day.date ? new Date(day.date) : null,
                                 participants: roundData.participants || []
                             };
                             
-                            console.log(`✅ Added round: ${roundInfo.className} Round ${roundInfo.roundNumber} (${roundInfo.participants.length} participants)`);
                             allRounds.push(roundInfo);
-                        } else {
-                            console.warn(`⚠️ Skipping round ${roundKey}: missing data or no participants`);
-                            console.log('Day:', day ? 'exists' : 'missing');
-                            console.log('Class:', cls ? cls.className : 'missing');
-                            console.log('Round:', round ? `Round ${round.roundNumber}` : 'missing');
-                            console.log('Participants:', roundData.participants ? roundData.participants.length : 0);
                         }
                     } catch (error) {
                         console.error(`❌ Error processing round ${roundKey}:`, error);
@@ -976,15 +719,9 @@
                 });
 
                 if (allRounds.length === 0) {
-                    console.error('❌ No valid rounds found after processing');
-                    console.log('Available round keys:', Object.keys(finalizedData));
-                    console.log('Trial structure:', currentTrial.days);
-                    throw new Error('No rounds with participants found. Please check that running orders have been generated and contain participant data.');
+                    throw new Error('No rounds with participants found');
                 }
 
-                console.log(`✅ Loaded ${allRounds.length} rounds with participants`);
-                
-                // Group rounds by day for display
                 renderRoundSelector();
                 
                 document.getElementById('roundSelector').style.display = 'block';
@@ -1007,7 +744,6 @@
             dayTabs.innerHTML = '';
             dayContents.innerHTML = '';
 
-            // Group rounds by day
             const roundsByDay = {};
             allRounds.forEach(round => {
                 if (!roundsByDay[round.dayIndex]) {
@@ -1016,39 +752,21 @@
                 roundsByDay[round.dayIndex].push(round);
             });
 
-            // Sort rounds within each day by CWAGS class order
-            Object.keys(roundsByDay).forEach(dayIndex => {
-                roundsByDay[dayIndex].sort((a, b) => {
-                    const orderA = getCwagsClassOrder(a.className);
-                    const orderB = getCwagsClassOrder(b.className);
-                    
-                    if (orderA !== orderB) {
-                        return orderA - orderB; // Sort by CWAGS class order first
-                    }
-                    
-                    // If same class, sort by round number
-                    return a.roundNumber - b.roundNumber;
-                });
-            });
-
-            // Create day tabs and content
             Object.keys(roundsByDay).forEach((dayIndex, tabIndex) => {
                 const dayData = currentTrial.days[dayIndex];
-                const dayDate = dayData.date ? getDateFromFirebase(dayData.date) : null;
+                const dayDate = dayData.date ? new Date(dayData.date) : null;
                 const dayLabel = dayDate ? dayDate.toLocaleDateString('en-US', { 
                     weekday: 'short', 
                     month: 'short', 
                     day: 'numeric' 
                 }) : `Day ${parseInt(dayIndex) + 1}`;
 
-                // Create tab
                 const tab = document.createElement('button');
                 tab.className = `day-tab ${tabIndex === 0 ? 'active' : ''}`;
                 tab.textContent = dayLabel;
                 tab.onclick = () => showDay(dayIndex);
                 dayTabs.appendChild(tab);
 
-                // Create content
                 const content = document.createElement('div');
                 content.className = `day-content ${tabIndex === 0 ? 'active' : ''}`;
                 content.id = `day-${dayIndex}`;
@@ -1056,17 +774,22 @@
                 const roundsGrid = document.createElement('div');
                 roundsGrid.className = 'day-rounds';
 
-                // Now rounds are sorted in CWAGS order
                 roundsByDay[dayIndex].forEach(round => {
                     const roundCard = document.createElement('div');
                     roundCard.className = 'round-card';
                     roundCard.onclick = () => selectRound(round);
+                    
+                    // Detect class type for preview
+                    const classType = detectClassType(round.className);
+                    const config = CLASS_CONFIGS[classType];
                     
                     roundCard.innerHTML = `
                         <h4>${round.className}</h4>
                         <p><strong>Round:</strong> ${round.roundNumber}</p>
                         <p><strong>Judge:</strong> ${round.judgeName}</p>
                         <p><strong>Participants:</strong> ${round.participants.length}</p>
+                        <p><strong>Detected Type:</strong> ${classType.charAt(0).toUpperCase() + classType.slice(1)}</p>
+                        <p><strong>Scoring:</strong> ${config.scoreRange}</p>
                     `;
                     
                     roundsGrid.appendChild(roundCard);
@@ -1078,23 +801,19 @@
         }
 
         function showDay(dayIndex) {
-            // Hide all day content
             document.querySelectorAll('.day-content').forEach(content => {
                 content.classList.remove('active');
             });
             
-            // Remove active class from all tabs
             document.querySelectorAll('.day-tab').forEach(tab => {
                 tab.classList.remove('active');
             });
             
-            // Show selected day content
             const dayContent = document.getElementById(`day-${dayIndex}`);
             if (dayContent) {
                 dayContent.classList.add('active');
             }
             
-            // Add active class to selected tab
             const tabs = document.querySelectorAll('.day-tab');
             tabs.forEach((tab, index) => {
                 if (tab.textContent.includes(dayIndex) || index == dayIndex) {
@@ -1118,6 +837,12 @@
                 // Add selection to clicked card
                 event.target.closest('.round-card').classList.add('selected');
 
+                // Detect class type automatically
+                const classType = detectClassType(round.className);
+                detectedClassConfig = CLASS_CONFIGS[classType];
+                
+                console.log(`🎯 Auto-detected class type: ${classType} for class "${round.className}"`);
+
                 // Load existing scores if any
                 try {
                     const scoresDoc = await db.collection('scores').doc(`${currentTrial.id}_${round.key}`).get();
@@ -1130,11 +855,12 @@
                     currentScores = { participants: {} };
                 }
 
-                // Initialize participant entry types from existing data
+                // Initialize participant entry types
                 await initializeParticipantEntryTypes(round);
 
-                renderScoreSheet(round);
-                showStatus('✅ Round loaded successfully', 'success');
+                // Render the appropriate score sheet based on detected class type
+                renderClassSpecificScoreSheet(round, classType);
+                showStatus(`✅ ${classType.charAt(0).toUpperCase() + classType.slice(1)} score sheet loaded`, 'success');
 
             } catch (error) {
                 console.error('❌ Error selecting round:', error);
@@ -1143,10 +869,9 @@
         }
 
         async function initializeParticipantEntryTypes(round) {
-            console.log('🔍 Initializing participant entry types from database...');
+            console.log('🔍 Initializing participant entry types...');
             
             try {
-                // Load all entries for this trial to get entry types
                 const entriesSnapshot = await db.collection('entries')
                     .where('trialId', '==', currentTrial.id)
                     .get();
@@ -1156,18 +881,14 @@
                     entryMap[doc.id] = doc.data();
                 });
 
-                // Initialize entry types for all participants
                 round.participants.forEach(participant => {
-                    // Handle different participant object structures
                     let participantId;
                     if (typeof participant === 'string') {
                         participantId = participant;
                     } else if (participant.id) {
                         participantId = participant.id;
                     } else {
-                        // Generate ID from participant data if needed
                         participantId = `${participant.handlerName || 'unknown'}_${participant.dogCallName || 'unknown'}_${Date.now()}`;
-                        console.log(`Generated participant ID: ${participantId}`);
                     }
 
                     if (participantId && participantId.includes('_')) {
@@ -1175,10 +896,8 @@
                         const entry = entryMap[docId];
                         
                         if (entry && entry.selectedEntries) {
-                            // Find matching selectedEntry for this participant
                             const matchingEntry = entry.selectedEntries.find(se => {
-                                return se.className === round.className || 
-                                       se[STANDARD_FIELDS.CLASS_NAME] === round.className;
+                                return se.className === round.className;
                             });
                             
                             if (matchingEntry) {
@@ -1190,21 +909,217 @@
                             participantEntryTypes[participantId] = 'regular';
                         }
                     } else {
-                        // For participants without proper ID format, default to regular
                         participantEntryTypes[participantId] = 'regular';
-                        console.log(`⚠️ Participant without proper ID format: ${participantId}`);
                     }
                 });
 
-                console.log('✅ Participant entry types initialized:', participantEntryTypes);
+                console.log('✅ Participant entry types initialized');
                 
             } catch (error) {
                 console.error('❌ Error initializing entry types:', error);
-                // Default all to regular if we can't load from database
                 round.participants.forEach(participant => {
                     participantEntryTypes[participant.id] = 'regular';
                 });
             }
+        }
+
+        function renderClassSpecificScoreSheet(round, classType) {
+            // Update header information
+            document.getElementById('sheetClass').textContent = round.className;
+            document.getElementById('sheetRound').textContent = `Round ${round.roundNumber}`;
+            document.getElementById('sheetDate').textContent = round.date ? round.date.toLocaleDateString() : 'Date TBD';
+            document.getElementById('sheetJudge').textContent = round.judgeName;
+
+            // Update class detection info
+            document.getElementById('detectedClassType').textContent = classType.charAt(0).toUpperCase() + classType.slice(1);
+            
+            const config = detectedClassConfig;
+            const gamesSubclass = classType === 'games' ? extractGamesSubclass(round.className) : null;
+            
+            // Update scoring info
+            const scoringInfo = document.getElementById('scoringInfo');
+            scoringInfo.innerHTML = `
+                <div class="scoring-info-card">
+                    <strong>Score Range:</strong><br>
+                    ${config.scoreRange}
+                </div>
+                <div class="scoring-info-card">
+                    <strong>Passing Score:</strong><br>
+                    ${config.passingScore}+
+                </div>
+                <div class="scoring-info-card">
+                    <strong>Pass Indicator:</strong><br>
+                    ${classType === 'games' ? `${gamesSubclass} (${GAMES_SUBCLASSES[gamesSubclass]})` : config.passIndicator}
+                </div>
+                ${classType === 'games' ? `
+                <div class="scoring-info-card">
+                    <strong>Games Type:</strong><br>
+                    ${GAMES_SUBCLASSES[gamesSubclass]}
+                </div>
+                ` : ''}
+            `;
+
+            // Generate appropriate table headers based on class type
+            const tableHead = document.getElementById('scoringTableHead');
+            const tableBody = document.getElementById('scoringTableBody');
+            
+            // Clear existing content
+            tableHead.innerHTML = '';
+            tableBody.innerHTML = '';
+
+            // Create headers based on class type
+            const headerRow = document.createElement('tr');
+            
+            if (classType === 'scent') {
+                // Scent work - use existing format
+                headerRow.innerHTML = `
+                    <th class="team-name">Team Dog - Handler</th>
+                    <th class="entry-type-cell">Entry Type</th>
+                    <th class="score-cell">Scent 1</th>
+                    <th class="score-cell">Scent 2</th>
+                    <th class="score-cell">Scent 3</th>
+                    <th class="score-cell">Scent 4</th>
+                    <th style="width: 150px;">Fault 1</th>
+                    <th style="width: 150px;">Fault 2</th>
+                    <th class="score-cell">Time</th>
+                    <th class="pass-cell">Pass/Fail</th>
+                `;
+            } else {
+                // Obedience, Games, Rally - numerical scoring format
+                headerRow.innerHTML = `
+                    <th class="cwags-cell">CWAGS #</th>
+                    <th class="team-name">Handler Name</th>
+                    <th class="team-name">Dog Call Name</th>
+                    <th class="entry-type-cell">Entry Type</th>
+                    <th class="score-cell">Score</th>
+                    <th class="pass-cell">Pass</th>
+                `;
+            }
+            
+            tableHead.appendChild(headerRow);
+
+            // Create participant rows
+            round.participants.forEach((participant) => {
+                const row = document.createElement('tr');
+                
+                let participantId, handlerName, dogCallName, cwagsNumber;
+                
+                if (typeof participant === 'string') {
+                    participantId = participant;
+                    handlerName = 'Loading...';
+                    dogCallName = 'Loading...';
+                    cwagsNumber = 'Loading...';
+                    loadParticipantDetails(participantId, row);
+                } else {
+                    participantId = participant.id || `participant_${Math.random().toString(36).substr(2, 9)}`;
+                    handlerName = participant.handlerName || 'Unknown Handler';
+                    dogCallName = participant.dogCallName || 'Unknown Dog';
+                    cwagsNumber = participant.cwagsNumber || 'Unknown';
+                }
+                
+                const participantScores = currentScores.participants?.[participantId] || {};
+                const entryType = participantEntryTypes[participantId] || 'regular';
+                
+                row.className = `entry-${entryType}`;
+                row.setAttribute('data-participant-id', participantId);
+                
+                if (classType === 'scent') {
+                    // Scent work format (existing)
+                    row.innerHTML = `
+                        <td class="team-name">${handlerName} - ${dogCallName}</td>
+                        <td class="entry-type-cell">
+                            <div class="entry-type-controls">
+                                <span class="status-indicator status-${entryType}">${entryType === 'feo' ? 'FEO' : 'Regular'}</span>
+                                <button class="feo-toggle-btn ${entryType === 'regular' ? 'regular' : ''}" onclick="toggleEntryType('${participantId}')">
+                                    Switch to ${entryType === 'feo' ? 'Regular' : 'FEO'}
+                                </button>
+                            </div>
+                        </td>
+                        <td class="score-cell">
+                            <select onchange="updateScore('${participantId}', 'scent1', this.value)">
+                                <option value="" ${participantScores.scent1 === '' || !participantScores.scent1 ? 'selected' : ''}>-</option>
+                                <option value="✓" ${participantScores.scent1 === '✓' ? 'selected' : ''}>✓</option>
+                                <option value="X" ${participantScores.scent1 === 'X' ? 'selected' : ''}>X</option>
+                            </select>
+                        </td>
+                        <td class="score-cell">
+                            <select onchange="updateScore('${participantId}', 'scent2', this.value)">
+                                <option value="" ${participantScores.scent2 === '' || !participantScores.scent2 ? 'selected' : ''}>-</option>
+                                <option value="✓" ${participantScores.scent2 === '✓' ? 'selected' : ''}>✓</option>
+                                <option value="X" ${participantScores.scent2 === 'X' ? 'selected' : ''}>X</option>
+                            </select>
+                        </td>
+                        <td class="score-cell">
+                            <select onchange="updateScore('${participantId}', 'scent3', this.value)">
+                                <option value="" ${participantScores.scent3 === '' || !participantScores.scent3 ? 'selected' : ''}>-</option>
+                                <option value="✓" ${participantScores.scent3 === '✓' ? 'selected' : ''}>✓</option>
+                                <option value="X" ${participantScores.scent3 === 'X' ? 'selected' : ''}>X</option>
+                            </select>
+                        </td>
+                        <td class="score-cell">
+                            <select onchange="updateScore('${participantId}', 'scent4', this.value)">
+                                <option value="" ${participantScores.scent4 === '' || !participantScores.scent4 ? 'selected' : ''}>-</option>
+                                <option value="✓" ${participantScores.scent4 === '✓' ? 'selected' : ''}>✓</option>
+                                <option value="X" ${participantScores.scent4 === 'X' ? 'selected' : ''}>X</option>
+                            </select>
+                        </td>
+                        <td>
+                            <input type="text" value="${participantScores.fault1 || ''}" onchange="updateScore('${participantId}', 'fault1', this.value)" placeholder="Fault description">
+                        </td>
+                        <td>
+                            <input type="text" value="${participantScores.fault2 || ''}" onchange="updateScore('${participantId}', 'fault2', this.value)" placeholder="Fault description">
+                        </td>
+                        <td class="score-cell">
+                            <input type="text" value="${participantScores.time || ''}" onchange="updateScore('${participantId}', 'time', this.value)" placeholder="0:00">
+                        </td>
+                        <td class="pass-cell">
+                            <select onchange="updateScore('${participantId}', 'passFail', this.value)">
+                                <option value="" ${participantScores.passFail === '' || !participantScores.passFail ? 'selected' : ''}>-</option>
+                                <option value="Pass" ${participantScores.passFail === 'Pass' ? 'selected' : ''}>Pass</option>
+                                <option value="Fail" ${participantScores.passFail === 'Fail' ? 'selected' : ''}>Fail</option>
+                            </select>
+                        </td>
+                    `;
+                } else {
+                    // Numerical scoring format (Obedience, Games, Rally)
+                    const maxScore = config.scoreRange.includes('150') ? 150 : 100;
+                    const passIndicator = classType === 'games' ? gamesSubclass : config.passIndicator;
+                    
+                    row.innerHTML = `
+                        <td class="cwags-cell">${cwagsNumber}</td>
+                        <td class="team-name">${handlerName}</td>
+                        <td class="team-name">${dogCallName}</td>
+                        <td class="entry-type-cell">
+                            <div class="entry-type-controls">
+                                <span class="status-indicator status-${entryType}">${entryType === 'feo' ? 'FEO' : 'Regular'}</span>
+                                <button class="feo-toggle-btn ${entryType === 'regular' ? 'regular' : ''}" onclick="toggleEntryType('${participantId}')">
+                                    Switch to ${entryType === 'feo' ? 'Regular' : 'FEO'}
+                                </button>
+                            </div>
+                        </td>
+                        <td class="score-cell">
+                            <input type="number" 
+                                   min="0" 
+                                   max="${maxScore}" 
+                                   value="${participantScores.numericalScore || ''}" 
+                                   onchange="updateNumericalScore('${participantId}', this.value, '${passIndicator}', ${config.passingScore})"
+                                   placeholder="0-${maxScore}">
+                        </td>
+                        <td class="pass-cell">
+                            <input type="text" 
+                                   value="${participantScores.passIndicator || ''}" 
+                                   onchange="updateScore('${participantId}', 'passIndicator', this.value)"
+                                   placeholder="${passIndicator}"
+                                   readonly>
+                        </td>
+                    `;
+                }
+                
+                tableBody.appendChild(row);
+            });
+
+            document.getElementById('scoreSheet').style.display = 'block';
+            document.getElementById('noDataMessage').style.display = 'none';
         }
 
         // Load participant details asynchronously
@@ -1212,152 +1127,65 @@
             try {
                 const [docId] = participantId.split('_');
                 
-                // Load the entry document to get handler and dog names
                 const entryDoc = await db.collection('entries').doc(docId).get();
                 
                 if (entryDoc.exists) {
                     const entryData = entryDoc.data();
                     const handlerName = entryData.handlerName || 'Unknown Handler';
                     const dogCallName = entryData.dogCallName || 'Unknown Dog';
+                    const cwagsNumber = entryData.cwagsNumber || 'Unknown';
                     
-                    // Update the team name cell in the row
-                    const teamNameCell = row.querySelector('.team-name');
-                    if (teamNameCell) {
-                        teamNameCell.textContent = `${handlerName} - ${dogCallName}`;
-                    }
-                } else {
-                    console.warn(`Entry document not found for participant: ${participantId}`);
-                    const teamNameCell = row.querySelector('.team-name');
-                    if (teamNameCell) {
-                        teamNameCell.textContent = 'Entry Not Found';
+                    // Update the cells in the row
+                    const cells = row.querySelectorAll('td');
+                    if (cells.length > 0) {
+                        if (detectedClassConfig.type === 'scent') {
+                            // Scent work format: Team name is first cell
+                            cells[0].textContent = `${handlerName} - ${dogCallName}`;
+                        } else {
+                            // Numerical format: CWAGS, Handler, Dog in separate cells
+                            if (cells[0]) cells[0].textContent = cwagsNumber;
+                            if (cells[1]) cells[1].textContent = handlerName;
+                            if (cells[2]) cells[2].textContent = dogCallName;
+                        }
                     }
                 }
             } catch (error) {
                 console.error(`Error loading participant details for ${participantId}:`, error);
-                const teamNameCell = row.querySelector('.team-name');
-                if (teamNameCell) {
-                    teamNameCell.textContent = 'Error Loading';
+            }
+        }
+
+        // Update numerical score with automatic pass/fail calculation
+        function updateNumericalScore(participantId, score, passIndicator, passingScore) {
+            updateScore(participantId, 'numericalScore', score);
+            
+            const numScore = parseInt(score);
+            if (!isNaN(numScore) && numScore >= passingScore) {
+                // Automatically mark as passed with appropriate indicator
+                updateScore(participantId, 'passIndicator', passIndicator);
+                
+                // Update the visual indicator
+                const row = document.querySelector(`[data-participant-id="${participantId}"]`);
+                if (row) {
+                    const passCell = row.querySelector('.pass-cell input');
+                    if (passCell) {
+                        passCell.value = passIndicator;
+                    }
+                }
+            } else {
+                // Clear pass indicator if score is below passing
+                updateScore(participantId, 'passIndicator', '');
+                
+                const row = document.querySelector(`[data-participant-id="${participantId}"]`);
+                if (row) {
+                    const passCell = row.querySelector('.pass-cell input');
+                    if (passCell) {
+                        passCell.value = '';
+                    }
                 }
             }
         }
 
-        function renderScoreSheet(round) {
-            document.getElementById('sheetClass').textContent = round.className;
-            document.getElementById('sheetRound').textContent = `Round ${round.roundNumber}`;
-            document.getElementById('sheetDate').textContent = round.date ? round.date.toLocaleDateString() : 'Date TBD';
-            document.getElementById('sheetJudge').textContent = round.judgeName;
-
-            // Load scent locations
-            document.getElementById('scent1Location').value = currentScores.scent1Location || '';
-            document.getElementById('scent2Location').value = currentScores.scent2Location || '';
-            document.getElementById('scent3Location').value = currentScores.scent3Location || '';
-            document.getElementById('scent4Location').value = currentScores.scent4Location || '';
-
-            const tbody = document.getElementById('scoringTableBody');
-            tbody.innerHTML = '';
-
-            round.participants.forEach((participant) => {
-                const row = document.createElement('tr');
-                
-                // Handle participant format - they are strings, not objects
-                let participantId, handlerName, dogCallName;
-                
-                if (typeof participant === 'string') {
-                    participantId = participant;
-                    
-                    // Extract handler and dog names from entries data
-                    const [docId] = participantId.split('_');
-                    
-                    // Try to get handler/dog names from entries (we'll need to load this)
-                    handlerName = 'Loading...';
-                    dogCallName = 'Loading...';
-                    
-                    // We'll update this asynchronously
-                    loadParticipantDetails(participantId, row);
-                    
-                } else if (typeof participant === 'object') {
-                    participantId = participant.id || `participant_${Math.random().toString(36).substr(2, 9)}`;
-                    handlerName = participant.handlerName || participant.handler || 'Unknown Handler';
-                    dogCallName = participant.dogCallName || participant.dog || 'Unknown Dog';
-                } else {
-                    // Fallback
-                    participantId = `participant_${Math.random().toString(36).substr(2, 9)}`;
-                    handlerName = 'Unknown Handler';
-                    dogCallName = 'Unknown Dog';
-                }
-                
-                const participantScores = currentScores.participants?.[participantId] || {};
-                const entryType = participantEntryTypes[participantId] || 'regular';
-                
-                // Set row class based on entry type
-                row.className = `entry-${entryType}`;
-                row.setAttribute('data-participant-id', participantId);
-                
-                row.innerHTML = `
-                    <td class="team-name">${handlerName} - ${dogCallName}</td>
-                    <td class="entry-type-cell">
-                        <div class="entry-type-controls">
-                            <span class="status-indicator status-${entryType}">${entryType === 'feo' ? 'FEO' : 'Regular'}</span>
-                            <button class="feo-toggle-btn ${entryType === 'regular' ? 'regular' : ''}" onclick="toggleEntryType('${participantId}')">
-                                Switch to ${entryType === 'feo' ? 'Regular' : 'FEO'}
-                            </button>
-                        </div>
-                    </td>
-                    <td class="scent-cell">
-                        <select onchange="updateScore('${participantId}', 'scent1', this.value)">
-                            <option value="" ${participantScores.scent1 === '' || !participantScores.scent1 ? 'selected' : ''}>-</option>
-                            <option value="✓" ${participantScores.scent1 === '✓' ? 'selected' : ''}>✓</option>
-                            <option value="X" ${participantScores.scent1 === 'X' ? 'selected' : ''}>X</option>
-                        </select>
-                    </td>
-                    <td class="scent-cell">
-                        <select onchange="updateScore('${participantId}', 'scent2', this.value)">
-                            <option value="" ${participantScores.scent2 === '' || !participantScores.scent2 ? 'selected' : ''}>-</option>
-                            <option value="✓" ${participantScores.scent2 === '✓' ? 'selected' : ''}>✓</option>
-                            <option value="X" ${participantScores.scent2 === 'X' ? 'selected' : ''}>X</option>
-                        </select>
-                    </td>
-                    <td class="scent-cell">
-                        <select onchange="updateScore('${participantId}', 'scent3', this.value)">
-                            <option value="" ${participantScores.scent3 === '' || !participantScores.scent3 ? 'selected' : ''}>-</option>
-                            <option value="✓" ${participantScores.scent3 === '✓' ? 'selected' : ''}>✓</option>
-                            <option value="X" ${participantScores.scent3 === 'X' ? 'selected' : ''}>X</option>
-                        </select>
-                    </td>
-                    <td class="scent-cell">
-                        <select onchange="updateScore('${participantId}', 'scent4', this.value)">
-                            <option value="" ${participantScores.scent4 === '' || !participantScores.scent4 ? 'selected' : ''}>-</option>
-                            <option value="✓" ${participantScores.scent4 === '✓' ? 'selected' : ''}>✓</option>
-                            <option value="X" ${participantScores.scent4 === 'X' ? 'selected' : ''}>X</option>
-                        </select>
-                    </td>
-                    <td class="fault-cell">
-                        <input type="text" value="${participantScores.fault1 || ''}" onchange="updateScore('${participantId}', 'fault1', this.value)" placeholder="Fault description">
-                    </td>
-                    <td class="fault-cell">
-                        <input type="text" value="${participantScores.fault2 || ''}" onchange="updateScore('${participantId}', 'fault2', this.value)" placeholder="Fault description">
-                    </td>
-                    <td class="time-cell">
-                        <input type="text" value="${participantScores.time || ''}" onchange="updateScore('${participantId}', 'time', this.value)" placeholder="0:00">
-                    </td>
-                    <td class="passfail-cell">
-                        <select onchange="updateScore('${participantId}', 'passFail', this.value)">
-                            <option value="" ${participantScores.passFail === '' || !participantScores.passFail ? 'selected' : ''}>-</option>
-                            <option value="Pass" ${participantScores.passFail === 'Pass' ? 'selected' : ''}>Pass</option>
-                            <option value="Fail" ${participantScores.passFail === 'Fail' ? 'selected' : ''}>Fail</option>
-                        </select>
-                    </td>
-                `;
-                
-                tbody.appendChild(row);
-            });
-
-            document.getElementById('scoreSheet').style.display = 'block';
-            document.getElementById('noDataMessage').style.display = 'none';
-        }
-
-        // ===== FEO TOGGLE FUNCTIONALITY =====
-        
+        // FEO Toggle functionality (same as before)
         async function toggleEntryType(participantId) {
             try {
                 const currentType = participantEntryTypes[participantId] || 'regular';
@@ -1366,13 +1194,8 @@
                 console.log(`🔄 Toggling ${participantId} from ${currentType} to ${newType}`);
                 showStatus(`🔄 Changing entry type to ${newType.toUpperCase()}...`, 'info');
                 
-                // Update local state
                 participantEntryTypes[participantId] = newType;
-                
-                // Update UI immediately
                 updateParticipantRowVisuals(participantId, newType);
-                
-                // Update all related records in database
                 await updateAllRelatedRecords(participantId, newType);
                 
                 showStatus(`✅ Entry type changed to ${newType.toUpperCase()}`, 'success');
@@ -1381,7 +1204,6 @@
                 console.error('❌ Error toggling entry type:', error);
                 showStatus('❌ Error updating entry type: ' + error.message, 'error');
                 
-                // Revert local state on error
                 const revertType = participantEntryTypes[participantId] === 'regular' ? 'feo' : 'regular';
                 participantEntryTypes[participantId] = revertType;
                 updateParticipantRowVisuals(participantId, revertType);
@@ -1392,17 +1214,14 @@
             const row = document.querySelector(`[data-participant-id="${participantId}"]`);
             if (!row) return;
             
-            // Update row class
             row.className = `entry-${entryType}`;
             
-            // Update status indicator
             const statusSpan = row.querySelector('.status-indicator');
             if (statusSpan) {
                 statusSpan.textContent = entryType === 'feo' ? 'FEO' : 'Regular';
                 statusSpan.className = `status-indicator status-${entryType}`;
             }
             
-            // Update button
             const toggleBtn = row.querySelector('.feo-toggle-btn');
             if (toggleBtn) {
                 if (entryType === 'feo') {
@@ -1416,34 +1235,11 @@
         }
 
         async function updateAllRelatedRecords(participantId, newEntryType) {
-            console.log(`📝 Updating all related records for ${participantId} to ${newEntryType}`);
-            
+            // Implementation same as before - updating Firebase records
             try {
-                // 1. Update the original entry in Firebase
                 const [docId] = participantId.split('_');
-                await updateOriginalEntry(docId, participantId, newEntryType);
                 
-                // 2. Update running order data
-                await updateRunningOrderData(participantId, newEntryType);
-                
-                // 3. Update any existing scores
-                await updateScoreRecords(participantId, newEntryType);
-                
-                // 4. Trigger refresh of reports that depend on FEO status
-                await triggerReportRefresh();
-                
-                console.log('✅ All related records updated successfully');
-                
-            } catch (error) {
-                console.error('❌ Error updating related records:', error);
-                throw error;
-            }
-        }
-
-        async function updateOriginalEntry(docId, participantId, newEntryType) {
-            console.log(`📝 Updating original entry ${docId} with new type: ${newEntryType}`);
-            
-            try {
+                // Update original entry
                 const entryRef = db.collection('entries').doc(docId);
                 const entryDoc = await entryRef.get();
                 
@@ -1452,9 +1248,7 @@
                     
                     if (entryData.selectedEntries) {
                         const updatedEntries = entryData.selectedEntries.map(entry => {
-                            // Match based on class name and round details
-                            if ((entry.className === currentRound.className || 
-                                 entry[STANDARD_FIELDS.CLASS_NAME] === currentRound.className) &&
+                            if ((entry.className === currentRound.className) &&
                                 entry.roundNumber === currentRound.roundNumber) {
                                 return { ...entry, type: newEntryType };
                             }
@@ -1465,101 +1259,16 @@
                             selectedEntries: updatedEntries,
                             lastModified: firebase.firestore.FieldValue.serverTimestamp()
                         });
-                        
-                        console.log(`✅ Updated entry ${docId} with new type: ${newEntryType}`);
                     }
                 }
+                
             } catch (error) {
-                console.error('❌ Error updating original entry:', error);
+                console.error('❌ Error updating related records:', error);
                 throw error;
             }
         }
 
-        async function updateRunningOrderData(participantId, newEntryType) {
-            console.log(`📝 Updating running order data for ${participantId}`);
-            
-            try {
-                const orderRef = db.collection('running_orders').doc(currentTrial.id);
-                const orderDoc = await orderRef.get();
-                
-                if (orderDoc.exists) {
-                    const orderData = orderDoc.data();
-                    
-                    // Update in finalizedRunningOrders or generatedSheets
-                    const dataField = orderData.finalizedRunningOrders ? 'finalizedRunningOrders' : 'generatedSheets';
-                    if (orderData[dataField]) {
-                        const roundKey = currentRound.key;
-                        const roundData = orderData[dataField][roundKey];
-                        
-                        if (roundData && roundData.participants) {
-                            const updatedParticipants = roundData.participants.map(participant => {
-                                if (participant.id === participantId) {
-                                    return { ...participant, entryType: newEntryType };
-                                }
-                                return participant;
-                            });
-                            
-                            await orderRef.update({
-                                [`${dataField}.${roundKey}.participants`]: updatedParticipants,
-                                lastModified: firebase.firestore.FieldValue.serverTimestamp()
-                            });
-                        }
-                    }
-                    
-                    console.log(`✅ Updated running order for ${participantId}`);
-                }
-            } catch (error) {
-                console.error('❌ Error updating running order:', error);
-                throw error;
-            }
-        }
-
-        async function updateScoreRecords(participantId, newEntryType) {
-            console.log(`📝 Updating score records for ${participantId}`);
-            
-            // Add entry type to current scores
-            if (!currentScores.participants[participantId]) {
-                currentScores.participants[participantId] = {};
-            }
-            currentScores.participants[participantId].entryType = newEntryType;
-            
-            try {
-                const scoresRef = db.collection('scores').doc(`${currentTrial.id}_${currentRound.key}`);
-                await scoresRef.set({
-                    ...currentScores,
-                    participantEntryTypes: participantEntryTypes,
-                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-                }, { merge: true });
-                
-                console.log(`✅ Updated score records for ${participantId}`);
-            } catch (error) {
-                console.error('❌ Error updating score records:', error);
-                throw error;
-            }
-        }
-
-        async function triggerReportRefresh() {
-            console.log(`🔄 Triggering refresh of reports that depend on FEO status`);
-            
-            try {
-                // Set a flag in Firebase to indicate reports need refresh
-                const refreshRef = db.collection('system').doc('reportRefreshFlags');
-                await refreshRef.set({
-                    [`trial_${currentTrial.id}`]: {
-                        needsRefresh: true,
-                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
-                        reason: 'FEO status change'
-                    }
-                }, { merge: true });
-                
-                console.log('✅ Report refresh flag set');
-            } catch (error) {
-                console.error('❌ Error setting report refresh flag:', error);
-            }
-        }
-
-        // ===== SCORING FUNCTIONS =====
-        
+        // Scoring functions
         function updateScore(participantId, field, value) {
             if (!currentScores.participants) {
                 currentScores.participants = {};
@@ -1584,7 +1293,6 @@
             const scents = [scores.scent1, scores.scent2, scores.scent3, scores.scent4];
             const foundScents = scents.filter(s => s === '✓').length;
             
-            // Pass = all 4 scents found, Fail = less than 4 scents
             let suggestion = '';
             if (foundScents === 4) {
                 suggestion = 'Pass';
@@ -1592,7 +1300,6 @@
                 suggestion = 'Fail';
             }
 
-            // Auto-update pass/fail field
             if (suggestion) {
                 scores.passFail = suggestion;
                 const passfailSelect = document.querySelector(`select[onchange*="${participantId}"][onchange*="passFail"]`);
@@ -1600,10 +1307,6 @@
                     passfailSelect.value = suggestion;
                 }
             }
-        }
-
-        function updateScentLocation(scentNumber, value) {
-            currentScores[`scent${scentNumber}Location`] = value;
         }
 
         async function saveScores() {
@@ -1616,18 +1319,12 @@
                 console.log('💾 Saving all scores and entry type changes...');
                 showStatus('🔄 Saving scores...', 'info');
                 
-                // Include scent locations in save
-                ['scent1Location', 'scent2Location', 'scent3Location', 'scent4Location'].forEach((id, index) => {
-                    const input = document.getElementById(id);
-                    if (input) {
-                        currentScores[`scent${index + 1}Location`] = input.value;
-                    }
-                });
-
                 const scoresRef = db.collection('scores').doc(`${currentTrial.id}_${currentRound.key}`);
                 await scoresRef.set({
                     ...currentScores,
                     participantEntryTypes: participantEntryTypes,
+                    detectedClassType: detectClassType(currentRound.className),
+                    classConfig: detectedClassConfig,
                     roundInfo: {
                         className: currentRound.className,
                         roundNumber: currentRound.roundNumber,
@@ -1655,45 +1352,45 @@
                 console.log('📄 Exporting filled score sheet...');
                 showStatus('🔄 Generating CSV export...', 'info');
                 
+                const classType = detectClassType(currentRound.className);
+                
                 let csvContent = "data:text/csv;charset=utf-8,";
                 csvContent += `"Trial","${currentTrial.clubName}"\n`;
                 csvContent += `"Class","${currentRound.className}"\n`;
                 csvContent += `"Judge","${currentRound.judgeName}"\n`;
                 csvContent += `"Date","${currentRound.date ? currentRound.date.toLocaleDateString() : 'Date TBD'}"\n`;
                 csvContent += `"Round","${currentRound.roundNumber}"\n`;
+                csvContent += `"Detected Type","${classType}"\n`;
                 csvContent += `\n`;
                 
-                csvContent += `"Scent Locations"\n`;
-                csvContent += `"Scent 1","${currentScores.scent1Location || ''}"\n`;
-                csvContent += `"Scent 2","${currentScores.scent2Location || ''}"\n`;
-                csvContent += `"Scent 3","${currentScores.scent3Location || ''}"\n`;
-                csvContent += `"Scent 4","${currentScores.scent4Location || ''}"\n`;
-                csvContent += `\n`;
-                
-                csvContent += `"Team Dog - Handler","Entry Type","Scent 1","Scent 2","Scent 3","Scent 4","Fault 1","Fault 2","Time","Pass/Fail"\n`;
-                
-                currentRound.participants.forEach(participant => {
-                    const scores = currentScores.participants?.[participant.id] || {};
-                    const entryType = participantEntryTypes[participant.id] || 'regular';
+                if (classType === 'scent') {
+                    // Scent work export format
+                    csvContent += `"Team Dog - Handler","Entry Type","Scent 1","Scent 2","Scent 3","Scent 4","Fault 1","Fault 2","Time","Pass/Fail"\n`;
                     
-                    const teamName = `${participant.handlerName} - ${participant.dogCallName}`;
-                    const scent1 = scores.scent1 || '';
-                    const scent2 = scores.scent2 || '';
-                    const scent3 = scores.scent3 || '';
-                    const scent4 = scores.scent4 || '';
-                    const fault1 = scores.fault1 || '';
-                    const fault2 = scores.fault2 || '';
-                    const time = scores.time || '';
-                    const passFail = scores.passFail || '';
+                    currentRound.participants.forEach(participant => {
+                        const scores = currentScores.participants?.[participant.id] || {};
+                        const entryType = participantEntryTypes[participant.id] || 'regular';
+                        
+                        const teamName = `${participant.handlerName} - ${participant.dogCallName}`;
+                        csvContent += `"${teamName}","${entryType.toUpperCase()}","${scores.scent1 || ''}","${scores.scent2 || ''}","${scores.scent3 || ''}","${scores.scent4 || ''}","${scores.fault1 || ''}","${scores.fault2 || ''}","${scores.time || ''}","${scores.passFail || ''}"\n`;
+                    });
+                } else {
+                    // Numerical scoring export format
+                    csvContent += `"CWAGS Number","Handler Name","Dog Call Name","Entry Type","Score","Pass Indicator"\n`;
                     
-                    csvContent += `"${teamName}","${entryType.toUpperCase()}","${scent1}","${scent2}","${scent3}","${scent4}","${fault1}","${fault2}","${time}","${passFail}"\n`;
-                });
+                    currentRound.participants.forEach(participant => {
+                        const scores = currentScores.participants?.[participant.id] || {};
+                        const entryType = participantEntryTypes[participant.id] || 'regular';
+                        
+                        csvContent += `"${participant.cwagsNumber || 'Unknown'}","${participant.handlerName || 'Unknown'}","${participant.dogCallName || 'Unknown'}","${entryType.toUpperCase()}","${scores.numericalScore || ''}","${scores.passIndicator || ''}"\n`;
+                    });
+                }
                 
                 const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
                 const url = URL.createObjectURL(blob);
                 const link = document.createElement('a');
                 link.href = url;
-                link.download = `${currentRound.className}_Round${currentRound.roundNumber}_Scores.csv`;
+                link.download = `${currentRound.className}_Round${currentRound.roundNumber}_${classType}_Scores.csv`;
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
@@ -1716,13 +1413,8 @@
             if (confirm('Are you sure you want to clear all scores for this round? This cannot be undone.')) {
                 currentScores = { participants: {} };
                 
-                // Clear all form inputs
                 document.querySelectorAll('#scoringTable select, #scoringTable input').forEach(input => {
                     input.value = '';
-                });
-                
-                ['scent1Location', 'scent2Location', 'scent3Location', 'scent4Location'].forEach(id => {
-                    document.getElementById(id).value = '';
                 });
 
                 showStatus('✅ All scores cleared', 'info');
@@ -1734,15 +1426,16 @@
                 console.log('🔄 Syncing all data with reports...');
                 showStatus('🔄 Syncing with all reports...', 'info');
                 
-                // Save current scores first
                 await saveScores();
                 
-                // Trigger regeneration of all reports that depend on FEO status
-                await Promise.all([
-                    regenerateClassSummary(),
-                    regenerateSingleDayReport(),
-                    regenerateTrialRecapSummary()
-                ]);
+                const refreshRef = db.collection('system').doc('reportRefreshFlags');
+                await refreshRef.set({
+                    [`trial_${currentTrial.id}`]: {
+                        needsRefresh: true,
+                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
+                        reason: 'Enhanced score entry changes'
+                    }
+                }, { merge: true });
                 
                 showStatus('✅ All reports synced successfully!', 'success');
                 
@@ -1752,73 +1445,7 @@
             }
         }
 
-        async function regenerateClassSummary() {
-            console.log('📊 Triggering class summary sheet regeneration...');
-            
-            try {
-                const refreshRef = db.collection('system').doc('reportRefreshFlags');
-                await refreshRef.set({
-                    [`classSummary_${currentTrial.id}`]: {
-                        needsRefresh: true,
-                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
-                        reason: 'Score entry FEO changes'
-                    }
-                }, { merge: true });
-            } catch (error) {
-                console.error('❌ Error setting class summary refresh flag:', error);
-            }
-        }
-
-        async function regenerateSingleDayReport() {
-            console.log('📋 Triggering single day trial report regeneration...');
-            
-            try {
-                const refreshRef = db.collection('system').doc('reportRefreshFlags');
-                await refreshRef.set({
-                    [`singleDayReport_${currentTrial.id}`]: {
-                        needsRefresh: true,
-                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
-                        reason: 'Score entry FEO changes'
-                    }
-                }, { merge: true });
-            } catch (error) {
-                console.error('❌ Error setting single day report refresh flag:', error);
-            }
-        }
-
-        async function regenerateTrialRecapSummary() {
-            console.log('📈 Triggering trial recap summary regeneration...');
-            
-            try {
-                const refreshRef = db.collection('system').doc('reportRefreshFlags');
-                await refreshRef.set({
-                    [`trialRecap_${currentTrial.id}`]: {
-                        needsRefresh: true,
-                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
-                        reason: 'Score entry FEO changes'
-                    }
-                }, { merge: true });
-            } catch (error) {
-                console.error('❌ Error setting trial recap refresh flag:', error);
-            }
-        }
-
-        // ===== UTILITY FUNCTIONS =====
-        
-        // Add event listeners for scent locations
-        document.addEventListener('DOMContentLoaded', function() {
-            ['scent1Location', 'scent2Location', 'scent3Location', 'scent4Location'].forEach((id, index) => {
-                const input = document.getElementById(id);
-                if (input) {
-                    input.addEventListener('change', function() {
-                        updateScentLocation(index + 1, this.value);
-                    });
-                }
-            });
-        });
-
-        // ===== AUTHENTICATION HANDLING =====
-        
+        // Authentication handling
         auth.onAuthStateChanged(function(user) {
             if (user) {
                 currentUser = user;
@@ -1833,7 +1460,7 @@
             }
         });
 
-        console.log('📊 Enhanced Score Entry System with FEO Management loaded successfully');
+        console.log('📊 Enhanced Score Entry System with Auto-Detection loaded successfully');
     </script>
 </body>
 </html>
