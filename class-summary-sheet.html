@@ -1351,32 +1351,32 @@ Final participant count: ${summaryData.debugInfo.totalParticipants}`);
                 let totalPasses = 0;
                 let totalScheduled = 0;
 
-                classData.rounds.forEach(round => {
-                    if (round.hasScores) {
-                        Object.entries(round.participants).forEach(([participantId, result]) => {
-                            const [docId] = participantId.split('_');
-                            const participantStillExists = classData.participants.some(p => p.id === docId);
-                            if (!participantStillExists) return;
+         
+classData.rounds.forEach(round => {
 
-                            if (result.passFail && result.passFail !== '-') {
-                                totalRuns++;
-                                if (result.passFail === 'Pass') {
-                                    totalPasses++;
-                                }
-                            }
-                        });
-                    } else {
-                        if (round.participants) {
-                            if (Array.isArray(round.participants)) {
-                                const validParticipants = round.participants.filter(p => {
-                                    const [docId] = p.id.split('_');
-                                    return classData.participants.some(cp => cp.id === docId);
-                                });
-                                totalScheduled += validParticipants.length;
-                            }
-                        }
-                    }
-                });
+
+if (classData.rounds && Array.isArray(classData.rounds)) {
+    classData.rounds.forEach(round => {
+        // ... existing forEach content stays the same ...
+    });
+} else {
+    console.warn(`Invalid rounds data for ${className}:`, classData.rounds);
+    // Handle case where rounds is not an array
+    const totalRuns = 0;
+    const totalPasses = 0;
+    const totalScheduled = classData.participants ? classData.participants.length : 0;
+    const totalPossibleRuns = totalScheduled;
+    const completionRate = '0';
+    const passRate = '0';
+    
+    row.innerHTML = `
+        <td>${className}</td>
+        <td>${classData.totalParticipants || 0}</td>
+        <td>${classData.totalRounds || 0}</td>
+        <td>${completionRate}% (${totalRuns}/${totalPossibleRuns})</td>
+        <td>${passRate}% (${totalPasses}/${totalRuns || 1})</td>
+    `;
+}
 
                 const totalPossibleRuns = totalRuns + totalScheduled;
                 const completionRate = totalPossibleRuns > 0 ? ((totalRuns / totalPossibleRuns) * 100).toFixed(1) : '0';
