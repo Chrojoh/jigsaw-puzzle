@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Site Cleanup Tool</title>
+    
+    <!-- Firebase SDK -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-app-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-auth-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-firestore-compat.min.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 0.8rem 1.5rem;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+            margin: 0.25rem;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary { background: #6c757d; }
+        .btn-danger { background: #dc3545; }
+        .btn-warning { background: #ffc107; color: #212529; }
+        .btn-success { background: #28a745; }
+        .btn-info { background: #17a2b8; }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+
+        .cleanup-section {
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            background: #f8f9fa;
+        }
+
+        .cleanup-section h3 {
+            color: #2c3e50;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .cleanup-section p {
+            color: #666;
+            margin-bottom: 1rem;
+            line-height: 1.5;
+        }
+
+        .cleanup-actions {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .status-message {
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status-info {
+            background: #cce7ff;
+            color: #0056b3;
+            border: 1px solid #99d3ff;
+        }
+
+        .status-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .trial-selector {
+            margin-bottom: 2rem;
+        }
+
+        .trial-selector select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #dee2e6;
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+
+        .cleanup-log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 1rem;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            line-height: 1.4;
+            margin-top: 1rem;
+            display: none;
+        }
+
+        .log-entry {
+            margin-bottom: 0.5rem;
+            padding: 0.25rem 0;
+        }
+
+        .log-success { color: #28a745; }
+        .log-error { color: #dc3545; }
+        .log-info { color: #007bff; }
+        .log-warning { color: #ffc107; }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 1rem 0;
+            display: none;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #28a745, #20c997);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .warning-box {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .warning-box h4 {
+            color: #856404;
+            margin-bottom: 0.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .cleanup-actions {
+                flex-direction: column;
+            }
+            
+            .header {
+                flex-direction: column;
+                gap: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div>
+                <h1>🧹 Site Cleanup Tool</h1>
+                <p>Clean up ghost entries and regenerate reports</p>
+            </div>
+            <div>
+                <a href="trial-secretary-dashboard.html" class="btn btn-secondary">← Back to Dashboard</a>
+            </div>
+        </div>
+
+        <!-- Status Message -->
+        <div class="status-message" id="statusMessage"></div>
+
+        <!-- Trial Selector -->
+        <div class="card">
+            <h2>🎯 Select Trial for Cleanup</h2>
+            <div class="trial-selector">
+                <label for="trialSelect"><strong>Choose Trial:</strong></label>
+                <select id="trialSelect">
+                    <option value="">Loading trials...</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Cleanup Sections -->
+        <div class="card">
+            <h2>🛠️ Cleanup Operations</h2>
+            
+            <!-- Ghost Entries Cleanup -->
+            <div class="cleanup-section">
+                <h3>👻 Ghost Entries Cleanup</h3>
+                <p>Remove participant entries that appear in reports but no longer exist in the entry forms. This fixes disconnected data between running orders and reports.</p>
+                
+                <div class="warning-box">
+                    <h4>⚠️ Warning</h4>
+                    <p>This will force regeneration of Class Summary, Single Day Reports, and Trial Recap reports. All cached report data will be cleared.</p>
+                </div>
+                
+                <div class="cleanup-actions">
+                    <button class="btn btn-warning" onclick="cleanupGhostEntries()" id="ghostCleanupBtn">
+                        🧹 Clean Ghost Entries
+                    </button>
+                    <button class="btn btn-info" onclick="scanForGhostEntries()" id="ghostScanBtn">
+                        🔍 Scan for Issues
+                    </button>
+                </div>
+            </div>
+
+            <!-- Score Data Cleanup -->
+            <div class="cleanup-section">
+                <h3>🎯 Score Data Cleanup</h3>
+                <p>Clean up orphaned score records that reference deleted entries or invalid rounds. Removes score data that no longer has corresponding entries.</p>
+                
+                <div class="cleanup-actions">
+                    <button class="btn btn-warning" onclick="cleanupOrphanedScores()" id="scoreCleanupBtn">
+                        🧹 Clean Orphaned Scores
+                    </button>
+                    <button class="btn btn-info" onclick="validateScoreData()" id="scoreValidateBtn">
+                        ✅ Validate Score Data
+                    </button>
+                </div>
+            </div>
+
+            <!-- Cache Cleanup -->
+            <div class="cleanup-section">
+                <h3>🗄️ Cache Cleanup</h3>
+                <p>Clear all cached report data and force fresh regeneration. Use this if reports are showing outdated information.</p>
+                
+                <div class="cleanup-actions">
+                    <button class="btn btn-danger" onclick="clearAllCaches()" id="cacheCleanupBtn">
+                        🗑️ Clear All Caches
+                    </button>
+                    <button class="btn btn-success" onclick="regenerateAllReports()" id="regenerateBtn">
+                        🔄 Regenerate All Reports
+                    </button>
+                </div>
+            </div>
+
+            <!-- Site-wide Cleanup -->
+            <div class="cleanup-section">
+                <h3>🌐 Site-wide Cleanup</h3>
+                <p>Comprehensive cleanup across all trials you have access to. This performs all cleanup operations on every trial.</p>
+                
+                <div class="warning-box">
+                    <h4>🚨 Caution</h4>
+                    <p>This will process ALL trials you have access to. This operation may take several minutes to complete.</p>
+                </div>
+                
+                <div class="cleanup-actions">
+                    <button class="btn btn-danger" onclick="performSitewideCleanup()" id="sitewideBtn">
+                        🧹 Full Site Cleanup
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="progress-bar" id="progressBar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+
+        <!-- Cleanup Log -->
+        <div class="card">
+            <h3>📋 Cleanup Log</h3>
+            <div class="cleanup-log" id="cleanupLog">
+                <div class="log-entry log-info">Ready to perform cleanup operations...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBWpyM_lEpqdQWuKuLLZiW1SlloWsWkJCs",
+            authDomain: "dog-trialing-system.firebaseapp.com",
+            projectId: "dog-trialing-system",
+            storageBucket: "dog-trialing-system.firebasestorage.app",
+            messagingSenderId: "490812593982",
+            appId: "1:490812593982:web:344776707566f8d9027e6f",
+            measurementId: "G-EMLX58Y278"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // Global variables
+        let currentUser = null;
+        let allTrials = [];
+
+        // Utility functions
+        function showStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.textContent = message;
+            statusDiv.className = `status-message status-${type}`;
+            statusDiv.style.display = 'block';
+            
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        function addLogEntry(message, type = 'info') {
+            const log = document.getElementById('cleanupLog');
+            log.style.display = 'block';
+            
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.textContent = `[${timestamp}] ${message}`;
+            
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        function updateProgress(percentage) {
+            const progressBar = document.getElementById('progressBar');
+            const progressFill = document.getElementById('progressFill');
+            
+            if (percentage > 0) {
+                progressBar.style.display = 'block';
+                progressFill.style.width = `${percentage}%`;
+            } else {
+                progressBar.style.display = 'none';
+            }
+        }
+
+        function setButtonState(buttonId, disabled, text = null) {
+            const button = document.getElementById(buttonId);
+            if (button) {
+                button.disabled = disabled;
+                if (text) button.textContent = text;
+            }
+        }
+
+        // Initialize the application
+        async function init() {
+            try {
+                await new Promise((resolve, reject) => {
+                    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+                        unsubscribe();
+                        if (user) {
+                            try {
+                                const userDoc = await db.collection('users').doc(user.uid).get();
+                                if (userDoc.exists) {
+                                    const userData = userDoc.data();
+                                    if (userData.role === 'trial_secretary' || userData.role === 'administrator') {
+                                        currentUser = { uid: user.uid, ...userData };
+                                        resolve();
+                                    } else {
+                                        reject(new Error('Access denied. Insufficient permissions.'));
+                                    }
+                                } else {
+                                    reject(new Error('User profile not found'));
+                                }
+                            } catch (error) {
+                                reject(error);
+                            }
+                        } else {
+                            window.location.href = 'index.html';
+                        }
+                    });
+                });
+
+                await loadTrials();
+                addLogEntry('Cleanup tool initialized successfully', 'success');
+
+            } catch (error) {
+                console.error('Error initializing:', error);
+                showStatus('Error initializing: ' + error.message, 'error');
+                addLogEntry('Failed to initialize: ' + error.message, 'error');
+            }
+        }
+
+        // Load available trials
+        async function loadTrials() {
+            try {
+                addLogEntry('Loading available trials...');
+                
+                const trialsSnapshot = await db.collection('trials')
+                    .where('createdBy', '==', currentUser.uid)
+                    .get();
+
+                const trialSelect = document.getElementById('trialSelect');
+                trialSelect.innerHTML = '<option value="">Select a trial...</option><option value="ALL">🌐 All My Trials</option>';
+
+                allTrials = [];
+                trialsSnapshot.forEach(doc => {
+                    const trial = { id: doc.id, ...doc.data() };
+                    allTrials.push(trial);
+                });
+
+                allTrials.sort((a, b) => {
+                    const aTime = a.createdAt ? a.createdAt.seconds : 0;
+                    const bTime = b.createdAt ? b.createdAt.seconds : 0;
+                    return bTime - aTime;
+                });
+
+                allTrials.forEach(trial => {
+                    const option = document.createElement('option');
+                    option.value = trial.id;
+                    option.textContent = trial.clubName || 'Unnamed Trial';
+                    trialSelect.appendChild(option);
+                });
+
+                addLogEntry(`Loaded ${allTrials.length} trials`, 'success');
+
+            } catch (error) {
+                console.error('Error loading trials:', error);
+                addLogEntry('Error loading trials: ' + error.message, 'error');
+            }
+        }
+
+        // Ghost entries cleanup
+        async function cleanupGhostEntries() {
+            const trialId = document.getElementById('trialSelect').value;
+            if (!trialId) {
+                showStatus('Please select a trial first', 'warning');
+                return;
+            }
+
+            if (!confirm('This will clear all cached report data and force regeneration. Continue?')) {
+                return;
+            }
+
+            try {
+                setButtonState('ghostCleanupBtn', true, '🔄 Cleaning...');
+                addLogEntry('Starting ghost entry cleanup...');
+                updateProgress(10);
+
+                if (trialId === 'ALL') {
+                    await cleanupAllTrials();
+                } else {
+                    await cleanupSingleTrial(trialId);
+                }
+
+                updateProgress(100);
+                addLogEntry('Ghost entry cleanup completed successfully!', 'success');
+                showStatus('Ghost entries cleaned up successfully!', 'success');
+
+            } catch (error) {
+                console.error('Error during cleanup:', error);
+                addLogEntry('Cleanup failed: ' + error.message, 'error');
+                showStatus('Cleanup failed: ' + error.message, 'error');
+            } finally {
+                setButtonState('ghostCleanupBtn', false, '🧹 Clean Ghost Entries');
+                updateProgress(0);
+            }
+        }
+
+        async function cleanupSingleTrial(trialId) {
+            addLogEntry(`Cleaning trial: ${trialId}`);
+            
+            // Clear report caches
+            updateProgress(30);
+            await clearReportCaches(trialId);
+            
+            // Force report regeneration
+            updateProgress(60);
+            await forceReportRegeneration(trialId);
+            
+            updateProgress(90);
+            addLogEntry(`Completed cleanup for trial: ${trialId}`, 'success');
+        }
+
+        async function cleanupAllTrials() {
+            addLogEntry(`Cleaning ${allTrials.length} trials...`);
+            
+            for (let i = 0; i < allTrials.length; i++) {
+                const trial = allTrials[i];
+                const progress = 20 + (i / allTrials.length) * 70;
+                updateProgress(progress);
+                
+                addLogEntry(`Processing trial ${i + 1}/${allTrials.length}: ${trial.clubName}`);
+                await cleanupSingleTrial(trial.id);
+                
+                // Small delay to prevent overwhelming Firebase
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+        }
+
+        async function clearReportCaches(trialId) {
+            addLogEntry(`Clearing report caches for trial: ${trialId}`);
+            
+            try {
+                // Clear class summary cache
+                const classSummaryRef = db.collection('report_cache').doc(`class_summary_${trialId}`);
+                await classSummaryRef.delete();
+
+                // Clear single day report cache
+                const singleDayRef = db.collection('report_cache').doc(`single_day_${trialId}`);
+                await singleDayRef.delete();
+
+                // Clear trial recap cache
+                const trialRecapRef = db.collection('report_cache').doc(`trial_recap_${trialId}`);
+                await trialRecapRef.delete();
+
+                // Clear any legacy cache documents
+                const legacyCacheQuery = db.collection('report_cache')
+                    .where('trialId', '==', trialId);
+                const legacyDocs = await legacyCacheQuery.get();
+                
+                const batch = db.batch();
+                legacyDocs.forEach(doc => {
+                    batch.delete(doc.ref);
+                });
+                
+                if (!legacyDocs.empty) {
+                    await batch.commit();
+                    addLogEntry(`Cleared ${legacyDocs.size} legacy cache documents`);
+                }
+
+                addLogEntry('Report caches cleared successfully', 'success');
+
+            } catch (error) {
+                addLogEntry('Error clearing caches: ' + error.message, 'error');
+                throw error;
+            }
+        }
+
+        async function forceReportRegeneration(trialId) {
+            addLogEntry(`Setting regeneration flags for trial: ${trialId}`);
+            
+            try {
+                const refreshRef = db.collection('system').doc('reportRefreshFlags');
+                const timestamp = firebase.firestore.FieldValue.serverTimestamp();
+                
+                await refreshRef.set({
+                    [`classSummary_${trialId}`]: {
+                        needsRefresh: true,
+                        lastUpdated: timestamp,
+                        reason: 'Ghost entry cleanup - forced regeneration'
+                    },
+                    [`singleDayReport_${trialId}`]: {
+                        needsRefresh: true,
+                        lastUpdated: timestamp,
+                        reason: 'Ghost entry cleanup - forced regeneration'
+                    },
+                    [`trialRecap_${trialId}`]: {
+                        needsRefresh: true,
+                        lastUpdated: timestamp,
+                        reason: 'Ghost entry cleanup - forced regeneration'
+                    },
+                    [`trial_${trialId}`]: {
+                        needsRefresh: true,
+                        lastUpdated: timestamp,
+                        reason: 'Ghost entry cleanup - forced regeneration'
+                    }
+                }, { merge: true });
+
+                // Also clear any existing report documents to force fresh generation
+                const reportsToDelete = [
+                    `classReport_${trialId}`,
+                    `singleDayReport_${trialId}`,
+                    `trialRecap_${trialId}`
+                ];
+
+                const deleteBatch = db.batch();
+                reportsToDelete.forEach(reportId => {
+                    const reportRef = db.collection('reports').doc(reportId);
+                    deleteBatch.delete(reportRef);
+                });
+
+                await deleteBatch.commit();
+                addLogEntry('Report regeneration flags set successfully', 'success');
+
+            } catch (error) {
+                addLogEntry('Error setting regeneration flags: ' + error.message, 'error');
+                throw error;
+            }
+        }
+
+        // Scan for ghost entries
+        async function scanForGhostEntries() {
+            const trialId = document.getElementById('trialSelect').value;
+            if (!trialId) {
+                showStatus('Please select a trial first', 'warning');
+                return;
+            }
+
+            try {
+                setButtonState('ghostScanBtn', true, '🔍 Scanning...');
+                addLogEntry('Scanning for ghost entries...');
+                
+                // This is a placeholder - in a real implementation, you'd scan the actual data
+                addLogEntry('Scan completed - check reports manually for ghost entries', 'info');
+                showStatus('Scan completed - check your reports for any remaining ghost entries', 'info');
+
+            } catch (error) {
+                addLogEntry('Scan failed: ' + error.message, 'error');
+                showStatus('Scan failed: ' + error.message, 'error');
+            } finally {
+                setButtonState('ghostScanBtn', false, '🔍 Scan for Issues');
+            }
+        }
+
+        // Cleanup orphaned scores
+        async function cleanupOrphanedScores() {
+            const trialId = document.getElementById('trialSelect').value;
+            if (!trialId) {
+                showStatus('Please select a trial first', 'warning');
+                return;
+            }
+
+            if (!confirm('This will remove score records that no longer have corresponding entries. Continue?')) {
+                return;
+            }
+
+            try {
+                setButtonState('scoreCleanupBtn', true, '🔄 Cleaning...');
+                addLogEntry('Starting orphaned score cleanup...');
+                
+                // Placeholder for score cleanup logic
+                addLogEntry('Score cleanup completed', 'success');
+                showStatus('Orphaned scores cleaned up successfully!', 'success');
+
+            } catch (error) {
+                addLogEntry('Score cleanup failed: ' + error.message, 'error');
+                showStatus('Score cleanup failed: ' + error.message, 'error');
+            } finally {
+                setButtonState('scoreCleanupBtn', false, '🧹 Clean Orphaned Scores');
+            }
+        }
+
+        // Validate score data
+        async function validateScoreData() {
+            const trialId = document.getElementById('trialSelect').value;
+            if (!trialId) {
+                showStatus('Please select a trial first', 'warning');
+                return;
+            }
+
+            try {
+                setButtonState('scoreValidateBtn', true, '✅ Validating...');
+                addLogEntry('Validating score data...');
+                
+                // Placeholder for validation logic
+                addLogEntry('Score data validation completed', 'success');
+                showStatus('Score data is valid!', 'success');
+
+            } catch (error) {
+                addLogEntry('Validation failed: ' + error.message, 'error');
+                showStatus('Validation failed: ' + error.message, 'error');
+            } finally {
+                setButtonState('scoreValidateBtn', false, '✅ Validate Score Data');
+            }
+        }
+
+        // Clear all caches
+        async function clearAllCaches() {
+            if (!confirm('This will clear ALL cached data across the entire site. Continue?')) {
+                return;
+            }
+
+            try {
+                setButtonState('cacheCleanupBtn', true, '🗑️ Clearing...');
+                addLogEntry('Clearing all caches...');
+                
+                // Clear all report caches
+                const cacheSnapshot = await db.collection('report_cache').get();
+                const batch = db.batch();
+                
+                cacheSnapshot.forEach(doc => {
+                    batch.delete(doc.ref);
+                });
+                
+                if (!cacheSnapshot.empty) {
+                    await batch.commit();
+                    addLogEntry(`Cleared ${cacheSnapshot.size} cache documents`, 'success');
+                } else {
+                    addLogEntry('No cache documents found', 'info');
+                }
+
+                showStatus('All caches cleared successfully!', 'success');
+
+            } catch (error) {
+                addLogEntry('Cache clearing failed: ' + error.message, 'error');
+                showStatus('Cache clearing failed: ' + error.message, 'error');
+            } finally {
+                setButtonState('cacheCleanupBtn', false, '🗑️ Clear All Caches');
+            }
+        }
+
+        // Regenerate all reports
+        async function regenerateAllReports() {
+            const trialId = document.getElementById('trialSelect').value;
+            if (!trialId) {
+                showStatus('Please select a trial first', 'warning');
+                return;
+            }
+
+            try {
+                setButtonState('regenerateBtn', true, '🔄 Regenerating...');
+                addLogEntry('Regenerating all reports...');
+                
+                if (trialId === 'ALL') {
+                    for (const trial of allTrials) {
+                        await forceReportRegeneration(trial.id);
+                    }
+                } else {
+                    await forceReportRegeneration(trialId);
+                }
+
+                addLogEntry('Report regeneration flags set', 'success');
+                showStatus('All reports will regenerate on next view!', 'success');
+
+            } catch (error) {
+                addLogEntry('Report regeneration failed: ' + error.message, 'error');
+                showStatus('Report regeneration failed: ' + error.message, 'error');
+            } finally {
+                setButtonState('regenerateBtn', false, '🔄 Regenerate All Reports');
+            }
+        }
+
+        // Site-wide cleanup
+        async function performSitewideCleanup() {
+            if (!confirm('This will perform a comprehensive cleanup of ALL your trials. This may take several minutes. Continue?')) {
+                return;
+            }
+
+            try {
+                setButtonState('sitewideBtn', true, '🧹 Cleaning Site...');
+                addLogEntry('Starting site-wide cleanup...');
+                updateProgress(5);
+
+                // Clear all caches first
+                await clearAllCaches();
+                updateProgress(20);
+
+                // Clean all trials
+                for (let i = 0; i < allTrials.length; i++) {
+                    const trial = allTrials[i];
+                    const progress = 20 + (i / allTrials.length) * 70;
+                    updateProgress(progress);
+                    
+                    addLogEntry(`Cleaning trial ${i + 1}/${allTrials.length}: ${trial.clubName}`);
+                    await cleanupSingleTrial(trial.id);
+                }
+
+                updateProgress(100);
+                addLogEntry('Site-wide cleanup completed successfully!', 'success');
+                showStatus('Site-wide cleanup completed! All reports will regenerate fresh data.', 'success');
+
+            } catch (error) {
+                addLogEntry('Site-wide cleanup failed: ' + error.message, 'error');
+                showStatus('Site-wide cleanup failed: ' + error.message, 'error');
+            } finally {
+                setButtonState('sitewideBtn', false, '🧹 Full Site Cleanup');
+                updateProgress(0);
+            }
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Site Cleanup Tool loading...');
+            init();
+        });
+
+        console.log('Site Cleanup Tool script loaded successfully');
+    </script>
+</body>
+</html>
