@@ -1778,18 +1778,42 @@
             showLookupStatus('🔍 Looking up registration...', 'info');
             
             try {
-                // Search in registration data with flexible matching
-                const registration = registrationData.find(reg => {
+                // Search in registration data with EXACT matching first, then flexible
+                let registration = null;
+                
+                // Try exact matches first (most precise)
+                registration = registrationData.find(reg => {
                     const regCwags = String(reg.cwagsNumber || '').trim();
                     const searchCwags = formatted.trim();
-                    const searchOriginal = cwagsNumber.trim();
-                    
-                    // Try multiple matching strategies
-                    return regCwags === searchCwags || 
-                           regCwags === searchOriginal ||
-                           regCwags.replace(/-/g, '') === searchCwags.replace(/-/g, '') ||
-                           regCwags.replace(/-/g, '') === searchOriginal.replace(/-/g, '');
+                    return regCwags === searchCwags;
                 });
+                
+                // If no exact match, try without dashes
+                if (!registration) {
+                    registration = registrationData.find(reg => {
+                        const regCwags = String(reg.cwagsNumber || '').trim().replace(/-/g, '');
+                        const searchCwags = formatted.trim().replace(/-/g, '');
+                        return regCwags === searchCwags && regCwags.length === searchCwags.length;
+                    });
+                }
+                
+                // Debug logging to see what we found
+                console.log(`🔍 Searching for: "${formatted}"`);
+                if (registration) {
+                    console.log(`✅ Found exact match: C-WAGS="${registration.cwagsNumber}", Handler="${registration.dogCallName}", Dog="${registration.handlerName}"`);
+                } else {
+                    console.log(`❌ No exact match found for: "${formatted}"`);
+                    // Show available similar numbers for debugging
+                    const similar = registrationData.filter(reg => {
+                        const regNum = String(reg.cwagsNumber || '').trim();
+                        return regNum.includes('4168') || regNum.includes('22-4168');
+                    });
+                    console.log('📊 Similar registrations found:', similar.map(r => ({
+                        cwagsNumber: r.cwagsNumber,
+                        handler: r.dogCallName,
+                        dog: r.handlerName
+                    })));
+                }
                 
                 if (registration) {
                     showLookupStatus('✅ Registration found!', 'success');
@@ -1885,20 +1909,27 @@
                     return;
                 }
                 
-                console.log('➕ Adding last minute participant:', { cwagsNumber, handlerName, dogCallName, entryType });
+                console.log('➕ Adding last minute participant CORRECTLY:', { 
+                    cwagsNumber, 
+                    handlerName: handlerName,  // This should be the handler
+                    dogCallName: dogCallName,  // This should be the dog
+                    entryType 
+                });
                 showStatus('🔄 Adding participant...', 'info');
                 
                 // Generate unique participant ID
                 const participantId = `lastminute_${Date.now()}`;
                 
-                // Create participant object
+                // Create participant object with CORRECT field assignments
                 const newParticipant = {
                     id: participantId,
-                    handlerName: handlerName,
-                    dogCallName: dogCallName,
+                    handlerName: handlerName,  // Keep as-is from form (now correct)
+                    dogCallName: dogCallName,  // Keep as-is from form (now correct)
                     entryType: entryType,
                     addedLastMinute: true
                 };
+                
+                console.log('🎯 Final participant object:', newParticipant);
                 
                 // Add to current round participants
                 await addToRunningOrder(participantId, newParticipant);
@@ -1907,7 +1938,12 @@
                 addParticipantToScoresheet(participantId, handlerName, dogCallName, entryType);
                 
                 // Create entry in database (backdoor to entryforms)
-                await createBackdoorEntry({ cwagsNumber, handlerName, dogCallName, entryType });
+                await createBackdoorEntry({ 
+                    cwagsNumber, 
+                    handlerName: handlerName,   // Correct assignment
+                    dogCallName: dogCallName,   // Correct assignment
+                    entryType 
+                });
                 
                 closeAddParticipantModal();
                 showStatus('✅ Participant added successfully!', 'success');
