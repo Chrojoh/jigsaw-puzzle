@@ -3,9 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>Class Summary Sheet - Enhanced</title>
-
     
     <!-- Firebase SDKs -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-app-compat.min.js"></script>
@@ -417,12 +415,6 @@
             <div id="debugContent"></div>
         </div>
 
-        <!-- Debug Info -->
-        <div class="debug-info" id="debugInfo" style="display: none;">
-            <strong>Debug Information:</strong>
-            <div id="debugContent"></div>
-        </div>
-
         <!-- Summary Container -->
         <div class="summary-container" id="summaryContainer">
             <div class="summary-header">
@@ -437,11 +429,7 @@
                     </thead>
                     <tbody id="summaryTableBody">
                         <!-- Table body will be generated here -->
-                <th>Class Type</th>
-                    <td style="text-align: center; font-weight: 600; color: ${getClassTypeColor(classData.classType)}">
-                    ${getClassTypeDisplay(classData.classType)}
-                    </td>
-                   </tbody>
+                    </tbody>
                 </table>
             </div>
 
@@ -450,11 +438,9 @@
             </div>
 
             <div class="export-buttons">
-
                 <button class="btn btn-success" id="exportCSVBtn">📄 Export CSV</button>
                 <button class="btn btn-info" id="exportExcelBtn">📊 Export Excel</button>
                 <button class="btn btn-warning" id="exportPDFBtn">📑 Export PDF</button>
-
             </div>
         </div>
 
@@ -486,36 +472,36 @@
         console.log('🔥 Firebase initialized');
 
         // Add this new function after Firebase init
-function detectClassType(className) {
-    const lowerClassName = className.toLowerCase();
-    
-    // Rally detection - check for rally classes first
-    if (lowerClassName.includes('rally') || 
-        lowerClassName.includes('starter') || 
-        lowerClassName.includes('advanced') || 
-        lowerClassName.includes('pro') || 
-        lowerClassName.includes('arf') || 
-        lowerClassName.includes('zoom')) {
-        return 'rally';
-    }
-    
-    // Games detection
-    if (lowerClassName.includes('games') || lowerClassName.includes('game')) {
-        return 'games';
-    }
-    
-    // Obedience detection
-    if (lowerClassName.includes('obedience') || lowerClassName.includes('obed')) {
-        if (lowerClassName.includes('5')) return 'obedience5';
-        if (lowerClassName.includes('4')) return 'obedience4';
-        if (lowerClassName.includes('3')) return 'obedience3';
-        if (lowerClassName.includes('2')) return 'obedience2';
-        if (lowerClassName.includes('1')) return 'obedience1';
-        return 'obedience1';
-    }
-    
-    return 'scent';
-}
+        function detectClassType(className) {
+            const lowerClassName = className.toLowerCase();
+            
+            // Rally detection - check for rally classes first
+            if (lowerClassName.includes('rally') || 
+                lowerClassName.includes('starter') || 
+                lowerClassName.includes('advanced') || 
+                lowerClassName.includes('pro') || 
+                lowerClassName.includes('arf') || 
+                lowerClassName.includes('zoom')) {
+                return 'rally';
+            }
+            
+            // Games detection
+            if (lowerClassName.includes('games') || lowerClassName.includes('game')) {
+                return 'games';
+            }
+            
+            // Obedience detection
+            if (lowerClassName.includes('obedience') || lowerClassName.includes('obed')) {
+                if (lowerClassName.includes('5')) return 'obedience5';
+                if (lowerClassName.includes('4')) return 'obedience4';
+                if (lowerClassName.includes('3')) return 'obedience3';
+                if (lowerClassName.includes('2')) return 'obedience2';
+                if (lowerClassName.includes('1')) return 'obedience1';
+                return 'obedience1';
+            }
+            
+            return 'scent';
+        }
         
         // ===== GLOBAL VARIABLES =====
         let summaryData = null;
@@ -540,11 +526,10 @@ function detectClassType(className) {
             'RANGER 4': 10, 'RANGER4': 10, 'R4': 10,
             'RANGER 5': 11, 'RANGER5': 11, 'R5': 11,
             'DASHER 3': 12, 'DASHER3': 12, 'DASH3': 12, 'DA3': 12,
-            'DASHER 4': 13, 'DASHER4': 13, 'DASH4': 13, 'DA4': 13,
-            'DASHER 5': 14, 'DASHER5': 14, 'DASH5': 14, 'DA5': 14,
-            'DASHER 6': 15, 'DASHER6': 15, 'DASH6': 15, 'DA6': 15
+            'DASHER 4': 13, 'DASHER4': 13, 'DASH4': 13, 'DA4': 14,
+            'DASHER 5': 14, 'DASHER5': 14, 'DASH5': 14, 'DA5': 15,
+            'DASHER 6': 15, 'DASHER6': 15, 'DASH6': 15, 'DA6': 16
         };
-
 
         // ===== UTILITY FUNCTIONS =====
         function getDateFromFirebase(dateValue) {
@@ -571,7 +556,6 @@ function detectClassType(className) {
             if (!entryType) return false;
             const typeStr = entryType.toString().toLowerCase().trim();
             return typeStr === 'feo' || typeStr === 'for exhibition only' || typeStr === 'exhibition';
-
         }
 
         function getCWAGSClassOrder(className) {
@@ -622,18 +606,14 @@ function detectClassType(className) {
             }, 5000);
         }
 
-
         function showProgress(show, percent = 0, message = '') {
-
             const container = document.getElementById('progressContainer');
             const bar = document.getElementById('progressBar');
             
             if (show) {
                 container.style.display = 'block';
                 bar.style.width = `${percent}%`;
-
                 bar.textContent = `${percent}% - ${message}`;
-
             } else {
                 container.style.display = 'none';
             }
@@ -646,7 +626,6 @@ function detectClassType(className) {
             debugContent.innerHTML = message;
             debugDiv.style.display = 'block';
         }
-
 
         function createLocalDate(dateStr) {
             if (!dateStr) return null;
@@ -922,9 +901,7 @@ function detectClassType(className) {
                 } else {
                     showStatus('No classes found in this trial', 'error');
                     allClassNames = [];
-
                     console.log('⚠️ No classes found in trial');
-
                 }
 
             } catch (error) {
@@ -934,171 +911,170 @@ function detectClassType(className) {
             }
         }
 
-
-   async function generateSummaryForClass(className) {
-    console.log(`🎯 Enhanced: Processing class: "${className}"`);
-    
-    const classType = detectClassType(className);
-    console.log(`Detected class type: ${classType} for "${className}"`);
-    
-    try {
-        // Method 1: Try to find scores by roundInfo.className
-        let scoresSnapshot = await db.collection('scores')
-            .where('roundInfo.className', '==', className)
-            .get();
-        
-        let allParticipants = [];
-        let hasNumericalScores = false;
-        
-        // Method 2: If no scores found, search all documents for this trial
-        if (scoresSnapshot.empty) {
-            console.log(`No scores found via roundInfo for ${className}, searching all documents...`);
+        async function generateSummaryForClass(className) {
+            console.log(`🎯 Enhanced: Processing class: "${className}"`);
             
-            const currentTrialId = document.getElementById('trialSelect').value;
-            const allScoresSnapshot = await db.collection('scores').get();
+            const classType = detectClassType(className);
+            console.log(`Detected class type: ${classType} for "${className}"`);
             
-            allScoresSnapshot.forEach(doc => {
-                const data = doc.data();
-                const docId = doc.id;
+            try {
+                // Method 1: Try to find scores by roundInfo.className
+                let scoresSnapshot = await db.collection('scores')
+                    .where('roundInfo.className', '==', className)
+                    .get();
                 
-                // Check if this document belongs to current trial and contains our class
-                if (docId.startsWith(currentTrialId) && data.participants) {
-                    Object.keys(data.participants).forEach(participantId => {
-                        if (participantId.includes(className)) {
-                            const scores = data.participants[participantId];
-                            
-                            // Handle numerical scores (Games, Rally, Obedience)
-                            if (scores.numericalScore !== undefined) {
-                                hasNumericalScores = true;
-                                allParticipants.push({
-                                    id: participantId,
-                                    score: parseInt(scores.numericalScore) || 0,
-                                    passed: scores.passIndicator && scores.passIndicator.trim() !== '',
-                                    passIndicator: scores.passIndicator || '',
-                                    entryType: scores.entryType || 'regular'
-                                });
-                            }
-                            // Handle scent work scores
-                            else if (scores.passFail !== undefined) {
-                                allParticipants.push({
-                                    id: participantId,
-                                    result: scores.passFail || '',
-                                    passed: scores.passFail === 'Pass',
-                                    entryType: scores.entryType || 'regular'
-                                });
-                            }
-                        }
-                    });
-                }
-            });
-        } else {
-            // Process scores found via roundInfo
-            scoresSnapshot.forEach(doc => {
-                const scoreData = doc.data();
-                if (scoreData.participants) {
-                    Object.entries(scoreData.participants).forEach(([participantId, scores]) => {
-                        if (scores.numericalScore !== undefined) {
-                            hasNumericalScores = true;
-                            allParticipants.push({
-                                id: participantId,
-                                score: parseInt(scores.numericalScore) || 0,
-                                passed: scores.passIndicator && scores.passIndicator.trim() !== '',
-                                passIndicator: scores.passIndicator || '',
-                                entryType: scores.entryType || 'regular'
-                            });
-                        } else if (scores.passFail !== undefined) {
-                            allParticipants.push({
-                                id: participantId,
-                                result: scores.passFail || '',
-                                passed: scores.passFail === 'Pass',
-                                entryType: scores.entryType || 'regular'
+                let allParticipants = [];
+                let hasNumericalScores = false;
+                
+                // Method 2: If no scores found, search all documents for this trial
+                if (scoresSnapshot.empty) {
+                    console.log(`No scores found via roundInfo for ${className}, searching all documents...`);
+                    
+                    const currentTrialId = document.getElementById('trialSelect').value;
+                    const allScoresSnapshot = await db.collection('scores').get();
+                    
+                    allScoresSnapshot.forEach(doc => {
+                        const data = doc.data();
+                        const docId = doc.id;
+                        
+                        // Check if this document belongs to current trial and contains our class
+                        if (docId.startsWith(currentTrialId) && data.participants) {
+                            Object.keys(data.participants).forEach(participantId => {
+                                if (participantId.includes(className)) {
+                                    const scores = data.participants[participantId];
+                                    
+                                    // Handle numerical scores (Games, Rally, Obedience)
+                                    if (scores.numericalScore !== undefined) {
+                                        hasNumericalScores = true;
+                                        allParticipants.push({
+                                            id: participantId,
+                                            score: parseInt(scores.numericalScore) || 0,
+                                            passed: scores.passIndicator && scores.passIndicator.trim() !== '',
+                                            passIndicator: scores.passIndicator || '',
+                                            entryType: scores.entryType || 'regular'
+                                        });
+                                    }
+                                    // Handle scent work scores
+                                    else if (scores.passFail !== undefined) {
+                                        allParticipants.push({
+                                            id: participantId,
+                                            result: scores.passFail || '',
+                                            passed: scores.passFail === 'Pass',
+                                            entryType: scores.entryType || 'regular'
+                                        });
+                                    }
+                                }
                             });
                         }
                     });
+                } else {
+                    // Process scores found via roundInfo
+                    scoresSnapshot.forEach(doc => {
+                        const scoreData = doc.data();
+                        if (scoreData.participants) {
+                            Object.entries(scoreData.participants).forEach(([participantId, scores]) => {
+                                if (scores.numericalScore !== undefined) {
+                                    hasNumericalScores = true;
+                                    allParticipants.push({
+                                        id: participantId,
+                                        score: parseInt(scores.numericalScore) || 0,
+                                        passed: scores.passIndicator && scores.passIndicator.trim() !== '',
+                                        passIndicator: scores.passIndicator || '',
+                                        entryType: scores.entryType || 'regular'
+                                    });
+                                } else if (scores.passFail !== undefined) {
+                                    allParticipants.push({
+                                        id: participantId,
+                                        result: scores.passFail || '',
+                                        passed: scores.passFail === 'Pass',
+                                        entryType: scores.entryType || 'regular'
+                                    });
+                                }
+                            });
+                        }
+                    });
                 }
-            });
+                
+                if (allParticipants.length > 0) {
+                    // Filter out FEO entries
+                    const regularParticipants = allParticipants.filter(p => p.entryType === 'regular');
+                    const feoCount = allParticipants.length - regularParticipants.length;
+                    
+                    const totalRun = regularParticipants.length;
+                    const totalPassed = regularParticipants.filter(p => p.passed).length;
+                    const passRate = totalRun > 0 ? ((totalPassed / totalRun) * 100).toFixed(1) : 0;
+                    
+                    console.log(`${className} stats - Total: ${totalRun}, Passed: ${totalPassed}, Pass Rate: ${passRate}%`);
+                    
+                    return {
+                        className: className,
+                        classType: classType,
+                        participants: totalRun,
+                        rounds: 1,
+                        completionRate: totalRun > 0 ? 100 : 0,
+                        passRate: parseFloat(passRate),
+                        feoFiltered: feoCount,
+                        hasScores: true
+                    };
+                } else {
+                    // Fall back to original method for classes without scores
+                    return await generateOriginalSummary(className);
+                }
+                
+            } catch (error) {
+                console.error(`Error processing ${className}:`, error);
+                return await generateOriginalSummary(className);
+            }
         }
-        
-        if (allParticipants.length > 0) {
-            // Filter out FEO entries
-            const regularParticipants = allParticipants.filter(p => p.entryType === 'regular');
-            const feoCount = allParticipants.length - regularParticipants.length;
-            
-            const totalRun = regularParticipants.length;
-            const totalPassed = regularParticipants.filter(p => p.passed).length;
-            const passRate = totalRun > 0 ? ((totalPassed / totalRun) * 100).toFixed(1) : 0;
-            
-            console.log(`${className} stats - Total: ${totalRun}, Passed: ${totalPassed}, Pass Rate: ${passRate}%`);
-            
-            return {
-                className: className,
-                classType: classType,
-                participants: totalRun,
-                rounds: 1,
-                completionRate: totalRun > 0 ? 100 : 0,
-                passRate: parseFloat(passRate),
-                feoFiltered: feoCount,
-                hasScores: true
-            };
-        } else {
-            // Fall back to original method for classes without scores
-            return await generateOriginalSummary(className);
-        }
-        
-    } catch (error) {
-        console.error(`Error processing ${className}:`, error);
-        return await generateOriginalSummary(className);
-    }
-}
 
         async function generateOriginalSummary(className) {
-    console.log(`Using original method for ${className}`);
-    
-    // Check running orders for participant count
-    try {
-        const currentTrialId = document.getElementById('trialSelect').value;
-        const orderDoc = await db.collection('running_orders').doc(currentTrialId).get();
-        
-        if (orderDoc.exists()) {
-            const orderData = orderDoc.data();
-            const rounds = orderData.finalizedRunningOrders || orderData.generatedSheets || orderData.roundOrders || {};
+            console.log(`Using original method for ${className}`);
             
-            let totalParticipants = 0;
-            Object.entries(rounds).forEach(([roundKey, roundData]) => {
-                if (roundData.participants) {
-                    roundData.participants.forEach(participant => {
-                        const participantId = typeof participant === 'string' ? participant : participant.id;
-                        if (participantId && participantId.includes(className)) {
-                            totalParticipants++;
+            // Check running orders for participant count
+            try {
+                const currentTrialId = document.getElementById('trialSelect').value;
+                const orderDoc = await db.collection('running_orders').doc(currentTrialId).get();
+                
+                if (orderDoc.exists()) {
+                    const orderData = orderDoc.data();
+                    const rounds = orderData.finalizedRunningOrders || orderData.generatedSheets || orderData.roundOrders || {};
+                    
+                    let totalParticipants = 0;
+                    Object.entries(rounds).forEach(([roundKey, roundData]) => {
+                        if (roundData.participants) {
+                            roundData.participants.forEach(participant => {
+                                const participantId = typeof participant === 'string' ? participant : participant.id;
+                                if (participantId && participantId.includes(className)) {
+                                    totalParticipants++;
+                                }
+                            });
                         }
                     });
+                    
+                    return {
+                        className: className,
+                        participants: totalParticipants,
+                        rounds: totalParticipants > 0 ? 1 : 0,
+                        completionRate: 0,
+                        passRate: 0,
+                        feoFiltered: 0,
+                        hasScores: false
+                    };
                 }
-            });
+            } catch (error) {
+                console.error(`Error in original summary for ${className}:`, error);
+            }
             
             return {
                 className: className,
-                participants: totalParticipants,
-                rounds: totalParticipants > 0 ? 1 : 0,
+                participants: 0,
+                rounds: 0,
                 completionRate: 0,
                 passRate: 0,
                 feoFiltered: 0,
                 hasScores: false
             };
         }
-    } catch (error) {
-        console.error(`Error in original summary for ${className}:`, error);
-    }
-    
-    return {
-        className: className,
-        participants: 0,
-        rounds: 0,
-        completionRate: 0,
-        passRate: 0,
-        feoFiltered: 0,
-        hasScores: false
-    };
-}
         
         async function generateSummary() {
             const trialId = document.getElementById('trialSelect').value;
@@ -1116,17 +1092,14 @@ function detectClassType(className) {
                     
                     allClassSummaries = {};
                     window.allClassSummaries = allClassSummaries;
-
                     
                     let debugSummary = {
                         totalClasses: allClassNames.length,
                         processedClasses: 0,
                         totalFeoFiltered: 0,
-
                         totalOrphanedFiltered: 0,
                         totalRegularIncluded: 0
                     };
-
 
                     for (let i = 0; i < allClassNames.length; i++) {
                         const className = allClassNames[i];
@@ -1140,24 +1113,19 @@ function detectClassType(className) {
                             
                             if (classSummary.debugInfo) {
                                 debugSummary.totalFeoFiltered += classSummary.debugInfo.feoFiltered;
-
                                 debugSummary.totalOrphanedFiltered += classSummary.debugInfo.orphanedFiltered || 0;
-
                                 debugSummary.totalRegularIncluded += classSummary.debugInfo.regularIncluded;
                             }
                         }
                     }
 
-
                     showProgress(false);
                     console.log('📊 Final All Classes Enhanced Debug Summary:', debugSummary);
-
 
                     if (Object.keys(allClassSummaries).length === 0) {
                         showStatus('No data found for any classes', 'error');
                         return;
                     }
-
 
                     const firstClassName = Object.keys(allClassSummaries)[0];
                     summaryData = allClassSummaries[firstClassName];
@@ -1197,8 +1165,8 @@ Final participant count: ${summaryData.debugInfo.totalParticipants}`);
                     renderSummary();
 
                     let statusMessage = 'Summary generated successfully!';
-                    if (summaryData.debugInfo.feoFiltered > 0) statusMessage += ` (${summaryData.debugInfo.feoFiltered} FEO entries filtered)`;
-                    if (summaryData.debugInfo.orphanedFiltered > 0) statusMessage += ` (${summaryData.debugInfo.orphanedFiltered} orphaned scores filtered)`;
+                    if (summaryData.debugInfo && summaryData.debugInfo.feoFiltered > 0) statusMessage += ` (${summaryData.debugInfo.feoFiltered} FEO entries filtered)`;
+                    if (summaryData.debugInfo && summaryData.debugInfo.orphanedFiltered > 0) statusMessage += ` (${summaryData.debugInfo.orphanedFiltered} orphaned scores filtered)`;
                     
                     showStatus(statusMessage, 'success');
                 }
@@ -1210,10 +1178,8 @@ Final participant count: ${summaryData.debugInfo.totalParticipants}`);
             }
         }
 
-
         // ===== STATISTICS FUNCTIONS =====
         function generateStatistics() {
-
             if (!summaryData) return;
 
             const statsSection = document.getElementById('statsSection');
@@ -1224,40 +1190,42 @@ Final participant count: ${summaryData.debugInfo.totalParticipants}`);
             let totalFails = 0;
             let totalScheduled = 0;
 
-            summaryData.rounds.forEach(round => {
-                if (round.hasScores) {
-                    Object.entries(round.participants).forEach(([participantId, result]) => {
-                        const [docId] = participantId.split('_');
-                        const participantStillExists = summaryData.participants.some(p => p.id === docId);
-                        if (!participantStillExists) return;
+            if (summaryData.rounds) {
+                summaryData.rounds.forEach(round => {
+                    if (round.hasScores) {
+                        Object.entries(round.participants).forEach(([participantId, result]) => {
+                            const [docId] = participantId.split('_');
+                            const participantStillExists = summaryData.participants.some(p => p.id === docId);
+                            if (!participantStillExists) return;
 
-                        if (result.passFail && result.passFail !== '-') {
-                            totalRuns++;
-                            if (result.passFail === 'Pass') {
-                                totalPasses++;
-                            } else if (result.passFail === 'Fail') {
-                                totalFails++;
+                            if (result.passFail && result.passFail !== '-') {
+                                totalRuns++;
+                                if (result.passFail === 'Pass') {
+                                    totalPasses++;
+                                } else if (result.passFail === 'Fail') {
+                                    totalFails++;
+                                }
+                            }
+                        });
+                    } else {
+                        if (round.participants) {
+                            if (Array.isArray(round.participants)) {
+                                const validParticipants = round.participants.filter(p => {
+                                    const [docId] = p.id.split('_');
+                                    return summaryData.participants.some(sp => sp.id === docId);
+                                });
+                                totalScheduled += validParticipants.length;
                             }
                         }
-                    });
-                } else {
-                    if (round.participants) {
-                        if (Array.isArray(round.participants)) {
-                            const validParticipants = round.participants.filter(p => {
-                                const [docId] = p.id.split('_');
-                                return summaryData.participants.some(sp => sp.id === docId);
-                            });
-                            totalScheduled += validParticipants.length;
-                        }
                     }
-                }
-            });
+                });
+            }
 
             const passRate = totalRuns > 0 ? ((totalPasses / totalRuns) * 100).toFixed(1) : '0';
 
             const stats = [
-                { label: 'Total Participants', value: summaryData.totalParticipants },
-                { label: 'Total Rounds', value: summaryData.totalRounds },
+                { label: 'Total Participants', value: summaryData.totalParticipants || 0 },
+                { label: 'Total Rounds', value: summaryData.totalRounds || 0 },
                 { label: 'Completed Runs', value: totalRuns },
                 { label: 'Scheduled Runs', value: totalScheduled },
                 { label: 'Passes', value: totalPasses },
@@ -1287,25 +1255,27 @@ Final participant count: ${summaryData.debugInfo.totalParticipants}`);
             let totalPasses = 0;
 
             Object.values(allClassSummaries).forEach(classData => {
-                totalParticipants += classData.totalParticipants;
-                totalRounds += classData.totalRounds;
+                totalParticipants += classData.totalParticipants || 0;
+                totalRounds += classData.totalRounds || 0;
 
-                classData.rounds.forEach(round => {
-                    if (round.hasScores) {
-                        Object.entries(round.participants).forEach(([participantId, result]) => {
-                            const [docId] = participantId.split('_');
-                            const participantStillExists = classData.participants.some(p => p.id === docId);
-                            if (!participantStillExists) return;
+                if (classData.rounds && Array.isArray(classData.rounds)) {
+                    classData.rounds.forEach(round => {
+                        if (round.hasScores) {
+                            Object.entries(round.participants).forEach(([participantId, result]) => {
+                                const [docId] = participantId.split('_');
+                                const participantStillExists = classData.participants.some(p => p.id === docId);
+                                if (!participantStillExists) return;
 
-                            if (result.passFail && result.passFail !== '-') {
-                                totalRuns++;
-                                if (result.passFail === 'Pass') {
-                                    totalPasses++;
+                                if (result.passFail && result.passFail !== '-') {
+                                    totalRuns++;
+                                    if (result.passFail === 'Pass') {
+                                        totalPasses++;
+                                    }
                                 }
-                            }
-                        });
-                    }
-                });
+                            });
+                        }
+                    });
+                }
             });
 
             const overallPassRate = totalRuns > 0 ? ((totalPasses / totalRuns) * 100).toFixed(1) : '0';
@@ -1355,32 +1325,35 @@ Final participant count: ${summaryData.debugInfo.totalParticipants}`);
                 let totalPasses = 0;
                 let totalScheduled = 0;
 
-         
-classData.rounds.forEach(round => {
+                if (classData.rounds && Array.isArray(classData.rounds)) {
+                    classData.rounds.forEach(round => {
+                        if (round.hasScores) {
+                            Object.entries(round.participants).forEach(([participantId, result]) => {
+                                const [docId] = participantId.split('_');
+                                const participantStillExists = classData.participants.some(p => p.id === docId);
+                                if (!participantStillExists) return;
 
-
-if (classData.rounds && Array.isArray(classData.rounds)) {
-    classData.rounds.forEach(round => {
-        // ... existing forEach content stays the same ...
-    });
-} else {
-    console.warn(`Invalid rounds data for ${className}:`, classData.rounds);
-    // Handle case where rounds is not an array
-    const totalRuns = 0;
-    const totalPasses = 0;
-    const totalScheduled = classData.participants ? classData.participants.length : 0;
-    const totalPossibleRuns = totalScheduled;
-    const completionRate = '0';
-    const passRate = '0';
-    
-    row.innerHTML = `
-        <td>${className}</td>
-        <td>${classData.totalParticipants || 0}</td>
-        <td>${classData.totalRounds || 0}</td>
-        <td>${completionRate}% (${totalRuns}/${totalPossibleRuns})</td>
-        <td>${passRate}% (${totalPasses}/${totalRuns || 1})</td>
-    `;
-}
+                                if (result.passFail && result.passFail !== '-') {
+                                    totalRuns++;
+                                    if (result.passFail === 'Pass') {
+                                        totalPasses++;
+                                    }
+                                }
+                            });
+                        } else {
+                            if (round.participants && Array.isArray(round.participants)) {
+                                const validParticipants = round.participants.filter(p => {
+                                    const [docId] = p.id.split('_');
+                                    return classData.participants.some(cp => cp.id === docId);
+                                });
+                                totalScheduled += validParticipants.length;
+                            }
+                        }
+                    });
+                } else {
+                    console.warn(`Invalid rounds data for ${className}:`, classData.rounds);
+                    totalScheduled = classData.participants || 0;
+                }
 
                 const totalPossibleRuns = totalRuns + totalScheduled;
                 const completionRate = totalPossibleRuns > 0 ? ((totalRuns / totalPossibleRuns) * 100).toFixed(1) : '0';
@@ -1388,10 +1361,10 @@ if (classData.rounds && Array.isArray(classData.rounds)) {
 
                 row.innerHTML = `
                     <td>${className}</td>
-                    <td>${classData.totalParticipants}</td>
-                    <td>${classData.totalRounds}</td>
+                    <td>${classData.participants || 0}</td>
+                    <td>${classData.rounds || 0}</td>
                     <td>${completionRate}% (${totalRuns}/${totalPossibleRuns})</td>
-                    <td>${passRate}% (${totalPasses}/${totalRuns})</td>
+                    <td>${passRate}% (${totalPasses}/${totalRuns || 1})</td>
                 `;
                 tbody.appendChild(row);
             });
@@ -1405,7 +1378,7 @@ if (classData.rounds && Array.isArray(classData.rounds)) {
             if (!summaryData) return;
 
             document.getElementById('summaryTitle').textContent = `Class Summary: ${summaryData.className}`;
-            document.getElementById('summaryInfo').textContent = `${summaryData.trialName} • ${summaryData.className} • ${summaryData.totalParticipants} Participants`;
+            document.getElementById('summaryInfo').textContent = `${summaryData.trialName || 'Trial'} • ${summaryData.className} • ${summaryData.totalParticipants || 0} Participants`;
 
             const thead = document.getElementById('summaryTableHead');
             thead.innerHTML = '';
@@ -1418,25 +1391,32 @@ if (classData.rounds && Array.isArray(classData.rounds)) {
             judgeRow.appendChild(createHeaderCell('Dog Name', 'participant-dog', 3));
             judgeRow.appendChild(createHeaderCell('Handler Name', 'participant-handler', 3));
 
-            summaryData.rounds.forEach((round, index) => {
-                const [dayIndex] = round.roundKey ? round.roundKey.split('-').map(Number) : [0];
-                const dayDate = currentTrial.days && currentTrial.days[dayIndex] 
-                    ? getDateFromFirebase(currentTrial.days[dayIndex].date) 
-                    : 'Date TBD';
-                const formattedDate = dayDate ? new Date(dayDate + 'T12:00:00').toLocaleDateString() : 'Date TBD';
+            if (summaryData.rounds && summaryData.rounds.length > 0) {
+                summaryData.rounds.forEach((round, index) => {
+                    const [dayIndex] = round.roundKey ? round.roundKey.split('-').map(Number) : [0];
+                    const dayDate = currentTrial.days && currentTrial.days[dayIndex] 
+                        ? getDateFromFirebase(currentTrial.days[dayIndex].date) 
+                        : 'Date TBD';
+                    const formattedDate = dayDate ? new Date(dayDate + 'T12:00:00').toLocaleDateString() : 'Date TBD';
 
-                const sameJudgeDate = summaryData.rounds.filter((r, i) => 
-                    i <= index && 
-                    r.judgeName === round.judgeName && 
-                    getDateFromRound(r) === getDateFromRound(round)
-                ).length;
+                    const sameJudgeDate = summaryData.rounds.filter((r, i) => 
+                        i <= index && 
+                        r.judgeName === round.judgeName && 
+                        getDateFromRound(r) === getDateFromRound(round)
+                    ).length;
 
-                const roundSuffix = sameJudgeDate > 1 ? ` (${sameJudgeDate})` : '';
+                    const roundSuffix = sameJudgeDate > 1 ? ` (${sameJudgeDate})` : '';
 
-                judgeRow.appendChild(createHeaderCell(round.judgeName || 'Judge TBD', 'round-header judge-name'));
-                dateRow.appendChild(createHeaderCell(formattedDate, 'round-header round-date'));
-                roundRow.appendChild(createHeaderCell(`${round.className || 'Class'}${roundSuffix}`, 'round-header round-info'));
-            });
+                    judgeRow.appendChild(createHeaderCell(round.judgeName || 'Judge TBD', 'round-header judge-name'));
+                    dateRow.appendChild(createHeaderCell(formattedDate, 'round-header round-date'));
+                    roundRow.appendChild(createHeaderCell(`${round.className || 'Class'}${roundSuffix}`, 'round-header round-info'));
+                });
+            } else {
+                // Handle case where there are no rounds
+                judgeRow.appendChild(createHeaderCell('No Rounds Available', 'round-header judge-name'));
+                dateRow.appendChild(createHeaderCell('', 'round-header round-date'));
+                roundRow.appendChild(createHeaderCell('', 'round-header round-info'));
+            }
 
             thead.appendChild(judgeRow);
             thead.appendChild(dateRow);
@@ -1445,98 +1425,102 @@ if (classData.rounds && Array.isArray(classData.rounds)) {
             const tbody = document.getElementById('summaryTableBody');
             tbody.innerHTML = '';
 
-            summaryData.participants.forEach(participant => {
-                const row = document.createElement('tr');
+            if (summaryData.participants && summaryData.participants.length > 0) {
+                summaryData.participants.forEach(participant => {
+                    const row = document.createElement('tr');
 
-                const cwagsCell = document.createElement('td');
-                cwagsCell.className = 'participant-cwags';
-                cwagsCell.textContent = participant.cwagsNumber || 'TBD';
-                row.appendChild(cwagsCell);
+                    const cwagsCell = document.createElement('td');
+                    cwagsCell.className = 'participant-cwags';
+                    cwagsCell.textContent = participant.cwagsNumber || 'TBD';
+                    row.appendChild(cwagsCell);
 
-                const dogCell = document.createElement('td');
-                dogCell.className = 'participant-dog';
-                dogCell.textContent = participant.dogName || 'Unknown';
-                row.appendChild(dogCell);
+                    const dogCell = document.createElement('td');
+                    dogCell.className = 'participant-dog';
+                    dogCell.textContent = participant.dogName || 'Unknown';
+                    row.appendChild(dogCell);
 
-                const handlerCell = document.createElement('td');
-                handlerCell.className = 'participant-handler';
-                handlerCell.textContent = participant.handlerName || 'Unknown Handler';
-                row.appendChild(handlerCell);
+                    const handlerCell = document.createElement('td');
+                    handlerCell.className = 'participant-handler';
+                    handlerCell.textContent = participant.handlerName || 'Unknown Handler';
+                    row.appendChild(handlerCell);
 
-                summaryData.rounds.forEach(round => {
-                    const cell = document.createElement('td');
-                    cell.className = 'result-cell';
-                    
+                    if (summaryData.rounds && summaryData.rounds.length > 0) {
+                        summaryData.rounds.forEach(round => {
+                            const cell = document.createElement('td');
+                            cell.className = 'result-cell';
+                            
+                            let result = '-';
+                            let cssClass = 'result-absent';
+                            let participatedInRound = false;
 
-                    let result = '-';
-                    let cssClass = 'result-absent';
-
-                    if (round.hasScores) {
-                        for (const participantId of participant.participantIds) {
-                            if (round.participants[participantId]) {
-                                const participantResult = round.participants[participantId];
-                                
-                                // Skip if this is FEO (double-check filtering)
-                                if (isFeoEntry(participantResult.entryType)) {
-                                    continue;
-                                }
-                                
-                                participatedInRound = true;
-                                if (participantResult.passFail) {
-                                    if (participantResult.passFail === 'Pass') {
-                                        result = 'P';
-                                        cssClass = 'result-pass';
-                                    } else if (participantResult.passFail === 'Fail') {
-                                        result = 'F';
-                                        cssClass = 'result-fail';
+                            if (round.hasScores) {
+                                for (const participantId of participant.participantIds) {
+                                    if (round.participants[participantId]) {
+                                        const participantResult = round.participants[participantId];
+                                        
+                                        // Skip if this is FEO (double-check filtering)
+                                        if (isFeoEntry(participantResult.entryType)) {
+                                            continue;
+                                        }
+                                        
+                                        participatedInRound = true;
+                                        if (participantResult.passFail) {
+                                            if (participantResult.passFail === 'Pass') {
+                                                result = 'P';
+                                                cssClass = 'result-pass';
+                                            } else if (participantResult.passFail === 'Fail') {
+                                                result = 'F';
+                                                cssClass = 'result-fail';
+                                            }
+                                        }
+                                        break;
                                     }
                                 }
-                                break;
-                            }
-                        }
-                    } else {
-                        if (round.participants && Array.isArray(round.participants)) {
-                            for (const participantId of participant.participantIds) {
-                                const roundParticipant = round.participants.find(p => p.id === participantId);
-                                if (roundParticipant) {
-
-                                    result = '•';
-                                    cssClass = 'result-absent';
-                                    cell.style.fontSize = '1.5rem';
-                                    cell.title = 'Scheduled to run - not yet scored';
-                                    break;
+                            } else {
+                                if (round.participants && Array.isArray(round.participants)) {
+                                    for (const participantId of participant.participantIds) {
+                                        const roundParticipant = round.participants.find(p => p.id === participantId);
+                                        if (roundParticipant) {
+                                            result = '•';
+                                            cssClass = 'result-absent';
+                                            cell.style.fontSize = '1.5rem';
+                                            cell.title = 'Scheduled to run - not yet scored';
+                                            break;
+                                        }
+                                    }
                                 }
                             }
-                        }
+
+                            cell.textContent = result;
+                            cell.classList.add(cssClass);
+                            row.appendChild(cell);
+                        });
+                    } else {
+                        // Add empty cell if no rounds
+                        const cell = document.createElement('td');
+                        cell.className = 'result-cell result-absent';
+                        cell.textContent = '-';
+                        row.appendChild(cell);
                     }
 
-                    cell.textContent = result;
-                    cell.classList.add(cssClass);
-                    row.appendChild(cell);
+                    tbody.appendChild(row);
                 });
-
+            } else {
+                // Add row indicating no participants
+                const row = document.createElement('tr');
+                const cell = document.createElement('td');
+                cell.colSpan = 3 + (summaryData.rounds ? summaryData.rounds.length : 1);
+                cell.textContent = 'No participants found for this class';
+                cell.style.textAlign = 'center';
+                cell.style.fontStyle = 'italic';
+                cell.style.color = '#6c757d';
+                row.appendChild(cell);
                 tbody.appendChild(row);
-            });
+            }
 
             generateStatistics();
             document.getElementById('summaryContainer').style.display = 'block';
             document.getElementById('noDataMessage').style.display = 'none';
-        }
-
-        // Include all export functions from the paste.txt file...
-        async function exportSummaryCSV() {
-            // Implementation from paste.txt
-            console.log('Export CSV functionality ready');
-        }
-
-        async function exportSummaryExcel() {
-            // Implementation from paste.txt
-            console.log('Export Excel functionality ready');
-        }
-
-        async function exportSummaryPDF() {
-            // Implementation from paste.txt
-            console.log('Export PDF functionality ready');
         }
 
         // ===== EXPORT FUNCTIONS =====
@@ -1590,69 +1574,79 @@ if (classData.rounds && Array.isArray(classData.rounds)) {
             }
         }
 
-
         function generateCSVContent(classData) {
             let csvContent = '';
             csvContent += `"Class Summary Report"\n`;
-            csvContent += `"Trial","${classData.trialName}"\n`;
+            csvContent += `"Trial","${classData.trialName || 'Unknown Trial'}"\n`;
             csvContent += `"Class","${classData.className}"\n`;
             csvContent += `"Generated","${new Date().toLocaleDateString()}"\n`;
             csvContent += `\n`;
 
             let headerRow = '"C-WAGS Number","Dog Name","Handler Name"';
-            classData.rounds.forEach((round, index) => {
-                const [dayIndex] = round.roundKey ? round.roundKey.split('-').map(Number) : [0];
-                const dayDate = currentTrial.days && currentTrial.days[dayIndex] 
-                    ? getDateFromFirebase(currentTrial.days[dayIndex].date) 
-                    : 'Date TBD';
-                const formattedDate = dayDate ? new Date(dayDate + 'T12:00:00').toLocaleDateString() : 'Date TBD';
+            if (classData.rounds && classData.rounds.length > 0) {
+                classData.rounds.forEach((round, index) => {
+                    const [dayIndex] = round.roundKey ? round.roundKey.split('-').map(Number) : [0];
+                    const dayDate = currentTrial.days && currentTrial.days[dayIndex] 
+                        ? getDateFromFirebase(currentTrial.days[dayIndex].date) 
+                        : 'Date TBD';
+                    const formattedDate = dayDate ? new Date(dayDate + 'T12:00:00').toLocaleDateString() : 'Date TBD';
 
-                const sameJudgeDate = classData.rounds.filter((r, i) => 
-                    i <= index && 
-                    r.judgeName === round.judgeName && 
-                    getDateFromRound(r) === getDateFromRound(round)
-                ).length;
+                    const sameJudgeDate = classData.rounds.filter((r, i) => 
+                        i <= index && 
+                        r.judgeName === round.judgeName && 
+                        getDateFromRound(r) === getDateFromRound(round)
+                    ).length;
 
-                const roundSuffix = sameJudgeDate > 1 ? ` (${sameJudgeDate})` : '';
-                headerRow += `,"${round.judgeName || 'Judge TBD'} - ${formattedDate}${roundSuffix}"`;
-            });
+                    const roundSuffix = sameJudgeDate > 1 ? ` (${sameJudgeDate})` : '';
+                    headerRow += `,"${round.judgeName || 'Judge TBD'} - ${formattedDate}${roundSuffix}"`;
+                });
+            } else {
+                headerRow += ',"No Rounds"';
+            }
             csvContent += headerRow + '\n';
 
-            classData.participants.forEach(participant => {
-                let row = `"${participant.cwagsNumber || 'TBD'}","${participant.dogName || 'Unknown'}","${participant.handlerName || 'Unknown Handler'}"`;
+            if (classData.participants && classData.participants.length > 0) {
+                classData.participants.forEach(participant => {
+                    let row = `"${participant.cwagsNumber || 'TBD'}","${participant.dogName || 'Unknown'}","${participant.handlerName || 'Unknown Handler'}"`;
 
-                classData.rounds.forEach(round => {
-                    let result = '-';
-                    if (round.hasScores) {
-                        for (const participantId of participant.participantIds) {
-                            if (round.participants[participantId]) {
-                                const participantResult = round.participants[participantId];
-                                if (participantResult.passFail) {
-                                    if (participantResult.passFail === 'Pass') {
-                                        result = 'P';
-                                    } else if (participantResult.passFail === 'Fail') {
-                                        result = 'F';
+                    if (classData.rounds && classData.rounds.length > 0) {
+                        classData.rounds.forEach(round => {
+                            let result = '-';
+                            if (round.hasScores) {
+                                for (const participantId of participant.participantIds) {
+                                    if (round.participants[participantId]) {
+                                        const participantResult = round.participants[participantId];
+                                        if (participantResult.passFail) {
+                                            if (participantResult.passFail === 'Pass') {
+                                                result = 'P';
+                                            } else if (participantResult.passFail === 'Fail') {
+                                                result = 'F';
+                                            }
+                                        }
+                                        break;
                                     }
                                 }
-                                break;
-
-                            }
-                        }
-                    } else {
-                        if (round.participants && Array.isArray(round.participants)) {
-                            for (const participantId of participant.participantIds) {
-                                const roundParticipant = round.participants.find(p => p.id === participantId);
-                                if (roundParticipant) {
-                                    result = '•';
-                                    break;
+                            } else {
+                                if (round.participants && Array.isArray(round.participants)) {
+                                    for (const participantId of participant.participantIds) {
+                                        const roundParticipant = round.participants.find(p => p.id === participantId);
+                                        if (roundParticipant) {
+                                            result = '•';
+                                            break;
+                                        }
+                                    }
                                 }
                             }
-                        }
+                            row += `,"${result}"`;
+                        });
+                    } else {
+                        row += ',"No Data"';
                     }
-                    row += `,"${result}"`;
+                    csvContent += row + '\n';
                 });
-                csvContent += row + '\n';
-            });
+            } else {
+                csvContent += '"No participants found","",""\n';
+            }
 
             return csvContent;
         }
@@ -1669,7 +1663,6 @@ if (classData.rounds && Array.isArray(classData.rounds)) {
                         const sheetName = className.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 31);
                         XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
                     });
-
 
                     const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
                     const blob = new Blob([excelBuffer], { 
@@ -1688,7 +1681,6 @@ if (classData.rounds && Array.isArray(classData.rounds)) {
                 } catch (error) {
                     console.error('Error exporting Excel:', error);
                     showStatus('Error exporting Excel: ' + error.message, 'error');
-
                 }
             } else if (summaryData) {
                 try {
@@ -1723,7 +1715,7 @@ if (classData.rounds && Array.isArray(classData.rounds)) {
         function generateExcelSheetData(classData) {
             const data = [];
             data.push(['Class Summary Report']);
-            data.push(['Trial', classData.trialName]);
+            data.push(['Trial', classData.trialName || 'Unknown Trial']);
             data.push(['Class', classData.className]);
             data.push(['Generated', new Date().toLocaleDateString()]);
             data.push([]);
@@ -1732,82 +1724,89 @@ if (classData.rounds && Array.isArray(classData.rounds)) {
             const dateRow = ['', '', ''];
             const roundRow = ['', '', ''];
 
-            classData.rounds.forEach((round, index) => {
-                const [dayIndex] = round.roundKey ? round.roundKey.split('-').map(Number) : [0];
-                const dayDate = currentTrial.days && currentTrial.days[dayIndex] 
-                    ? getDateFromFirebase(currentTrial.days[dayIndex].date) 
-                    : 'Date TBD';
-                const formattedDate = dayDate ? new Date(dayDate + 'T12:00:00').toLocaleDateString() : 'Date TBD';
+            if (classData.rounds && classData.rounds.length > 0) {
+                classData.rounds.forEach((round, index) => {
+                    const [dayIndex] = round.roundKey ? round.roundKey.split('-').map(Number) : [0];
+                    const dayDate = currentTrial.days && currentTrial.days[dayIndex] 
+                        ? getDateFromFirebase(currentTrial.days[dayIndex].date) 
+                        : 'Date TBD';
+                    const formattedDate = dayDate ? new Date(dayDate + 'T12:00:00').toLocaleDateString() : 'Date TBD';
 
-                const sameJudgeDate = classData.rounds.filter((r, i) => 
-                    i <= index && 
-                    r.judgeName === round.judgeName && 
-                    getDateFromRound(r) === getDateFromRound(round)
-                ).length;
+                    const sameJudgeDate = classData.rounds.filter((r, i) => 
+                        i <= index && 
+                        r.judgeName === round.judgeName && 
+                        getDateFromRound(r) === getDateFromRound(round)
+                    ).length;
 
-                const roundSuffix = sameJudgeDate > 1 ? ` (${sameJudgeDate})` : '';
+                    const roundSuffix = sameJudgeDate > 1 ? ` (${sameJudgeDate})` : '';
 
-                judgeRow.push(round.judgeName || 'Judge TBD');
-                dateRow.push(formattedDate);
-                roundRow.push(`${round.className || 'Class'}${roundSuffix}`);
-            });
-
+                    judgeRow.push(round.judgeName || 'Judge TBD');
+                    dateRow.push(formattedDate);
+                    roundRow.push(`${round.className || 'Class'}${roundSuffix}`);
+                });
+            } else {
+                judgeRow.push('No Rounds');
+                dateRow.push('');
+                roundRow.push('');
+            }
 
             data.push(judgeRow);
             data.push(dateRow);
             data.push(roundRow);
 
+            if (classData.participants && classData.participants.length > 0) {
+                classData.participants.forEach(participant => {
+                    const row = [
+                        participant.cwagsNumber || 'TBD',
+                        participant.dogName || 'Unknown',
+                        participant.handlerName || 'Unknown Handler'
+                    ];
 
-            classData.participants.forEach(participant => {
-                const row = [
-                    participant.cwagsNumber || 'TBD',
-                    participant.dogName || 'Unknown',
-                    participant.handlerName || 'Unknown Handler'
-                ];
+                    if (classData.rounds && classData.rounds.length > 0) {
+                        classData.rounds.forEach(round => {
+                            let result = '-';
 
-
-                classData.rounds.forEach(round => {
-                    let result = '-';
-
-                    if (round.hasScores) {
-                        for (const participantId of participant.participantIds) {
-                            if (round.participants[participantId]) {
-                                const participantResult = round.participants[participantId];
-
-                                if (participantResult.passFail) {
-                                    if (participantResult.passFail === 'Pass') {
-                                        result = 'P';
-                                    } else if (participantResult.passFail === 'Fail') {
-                                        result = 'F';
+                            if (round.hasScores) {
+                                for (const participantId of participant.participantIds) {
+                                    if (round.participants[participantId]) {
+                                        const participantResult = round.participants[participantId];
+                                        if (participantResult.passFail) {
+                                            if (participantResult.passFail === 'Pass') {
+                                                result = 'P';
+                                            } else if (participantResult.passFail === 'Fail') {
+                                                result = 'F';
+                                            }
+                                        }
+                                        break;
                                     }
                                 }
-                                break;
-                            }
-                        }
-                    } else {
-                        if (round.participants && Array.isArray(round.participants)) {
-                            for (const participantId of participant.participantIds) {
-                                const roundParticipant = round.participants.find(p => p.id === participantId);
-                                if (roundParticipant) {
-
-                                    result = '•';
-                                    break;
+                            } else {
+                                if (round.participants && Array.isArray(round.participants)) {
+                                    for (const participantId of participant.participantIds) {
+                                        const roundParticipant = round.participants.find(p => p.id === participantId);
+                                        if (roundParticipant) {
+                                            result = '•';
+                                            break;
+                                        }
+                                    }
                                 }
                             }
-                        }
+                            row.push(result);
+                        });
+                    } else {
+                        row.push('No Data');
                     }
-
-                    row.push(result);
+                    data.push(row);
                 });
-                data.push(row);
-            });
+            } else {
+                data.push(['No participants found', '', '']);
+            }
 
             return data;
         }
 
         async function exportSummaryPDF() {
             if (currentClass === 'ALL_CLASSES' && Object.keys(allClassSummaries).length > 0) {
-
                 try {
                     showStatus('Creating PDF with all classes...', 'info');
                     
@@ -1817,7 +1816,6 @@ if (classData.rounds && Array.isArray(classData.rounds)) {
                         <!DOCTYPE html>
                         <html>
                         <head>
-
                             <title>All Classes Summary</title>
                             <style>
                                 body { font-family: Arial, sans-serif; margin: 20px; }
@@ -1858,12 +1856,10 @@ if (classData.rounds && Array.isArray(classData.rounds)) {
                             <div class="legend">
                                 <p><strong>Legend:</strong> P = Pass, F = Fail, • = Scheduled, - = Did not run</p>
                                 <p><strong>Note:</strong> FEO entries and orphaned scores have been filtered out</p>
-
                             </div>
                         </body>
                         </html>
                     `;
-
 
                     printWindow.document.write(htmlContent);
                     printWindow.document.close();
@@ -1871,7 +1867,6 @@ if (classData.rounds && Array.isArray(classData.rounds)) {
                     printWindow.onload = function() {
                         printWindow.print();
                     };
-
 
                     showStatus('Enhanced PDF with all classes opened in new window', 'success');
 
@@ -1880,7 +1875,6 @@ if (classData.rounds && Array.isArray(classData.rounds)) {
                     showStatus('Error exporting PDF: ' + error.message, 'error');
                 }
             } else if (summaryData) {
-
                 try {
                     const printWindow = window.open('', '_blank');
 
@@ -1888,14 +1882,11 @@ if (classData.rounds && Array.isArray(classData.rounds)) {
                         <!DOCTYPE html>
                         <html>
                         <head>
-
                             <title>Enhanced Class Summary</title>
-
                             <style>
                                 body { font-family: Arial, sans-serif; margin: 20px; }
                                 .header { text-align: center; margin-bottom: 30px; }
                                 .title { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
-
                                 .info { font-size: 16px; color: #666; margin-bottom: 20px; }
                                 table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
                                 th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
@@ -1904,21 +1895,17 @@ if (classData.rounds && Array.isArray(classData.rounds)) {
                                 .result-fail { background-color: #f8d7da; color: #721c24; }
                                 .result-absent { background-color: #fff3cd; color: #856404; }
                                 .legend { margin-top: 20px; font-size: 12px; color: #666; }
-
                             </style>
                         </head>
                         <body>
                             ${generatePDFClassSection(summaryData, false)}
-
                             <div class="legend">
                                 <p><strong>Legend:</strong> P = Pass, F = Fail, • = Scheduled, - = Did not run</p>
                                 <p><strong>Note:</strong> FEO entries and orphaned scores have been filtered out</p>
-
                             </div>
                         </body>
                         </html>
                     `;
-
 
                     printWindow.document.write(htmlContent);
                     printWindow.document.close();
@@ -1926,7 +1913,6 @@ if (classData.rounds && Array.isArray(classData.rounds)) {
                     printWindow.onload = function() {
                         printWindow.print();
                     };
-
 
                     showStatus('Enhanced PDF export opened in new window', 'success');
 
@@ -1939,7 +1925,6 @@ if (classData.rounds && Array.isArray(classData.rounds)) {
             }
         }
 
-
         function generatePDFClassSection(classData, isMultiClass = true) {
             const sectionClass = isMultiClass ? 'class-section' : '';
             const headerClass = isMultiClass ? 'class-header' : 'header';
@@ -1950,8 +1935,8 @@ if (classData.rounds && Array.isArray(classData.rounds)) {
                 <div class="${sectionClass}">
                     <div class="${headerClass}">
                         <div class="${titleClass}">Class Summary: ${classData.className}</div>
-                        <div class="${infoClass}">Trial: ${classData.trialName}</div>
-                        <div class="${infoClass}">Total Participants: ${classData.totalParticipants} | Total Rounds: ${classData.totalRounds}</div>
+                        <div class="${infoClass}">Trial: ${classData.trialName || 'Unknown Trial'}</div>
+                        <div class="${infoClass}">Total Participants: ${classData.totalParticipants || 0} | Total Rounds: ${classData.totalRounds || 0}</div>
                     </div>
 
                     <table>
@@ -1959,9 +1944,11 @@ if (classData.rounds && Array.isArray(classData.rounds)) {
                             <tr>
                                 <th rowspan="3">C-WAGS Number</th>
                                 <th rowspan="3">Dog Name</th>
-                                <th rowspan="3">Handler Name</th>
+                                <th rowspan="3">Handler Name</th>`;
 
-                                ${classData.rounds.map(round => `<th>${round.judgeName || 'Judge TBD'}</th>`).join('')}
+            if (classData.rounds && classData.rounds.length > 0) {
+                html += classData.rounds.map(round => `<th>${round.judgeName || 'Judge TBD'}</th>`).join('');
+                html += `
                             </tr>
                             <tr>
                                 ${classData.rounds.map(round => {
@@ -1982,63 +1969,88 @@ if (classData.rounds && Array.isArray(classData.rounds)) {
                                     ).length;
                                     const roundSuffix = sameJudgeDate > 1 ? ` (${sameJudgeDate})` : '';
                                     return `<th>${round.className || 'Class'}${roundSuffix}</th>`;
-                                }).join('')}
+                                }).join('')}`;
+            } else {
+                html += `<th>No Rounds</th>
+                            </tr>
+                            <tr>
+                                <th></th>
+                            </tr>
+                            <tr>
+                                <th></th>`;
+            }
+
+            html += `
                             </tr>
                         </thead>
-                        <tbody>
-                            ${classData.participants.map(participant => {
-                                const resultCells = classData.rounds.map(round => {
-                                    let result = '-';
-                                    let cssClass = 'result-absent';
-                                    
-                                    if (round.hasScores) {
-                                        for (const participantId of participant.participantIds) {
-                                            if (round.participants[participantId]) {
-                                                const participantResult = round.participants[participantId];
+                        <tbody>`;
 
-                                                if (participantResult.passFail) {
-                                                    if (participantResult.passFail === 'Pass') {
-                                                        result = 'P';
-                                                        cssClass = 'result-pass';
-                                                    } else if (participantResult.passFail === 'Fail') {
-                                                        result = 'F';
-                                                        cssClass = 'result-fail';
-                                                    }
-                                                }
-                                                break;
+            if (classData.participants && classData.participants.length > 0) {
+                classData.participants.forEach(participant => {
+                    let resultCells = '';
+                    
+                    if (classData.rounds && classData.rounds.length > 0) {
+                        resultCells = classData.rounds.map(round => {
+                            let result = '-';
+                            let cssClass = 'result-absent';
+                            
+                            if (round.hasScores) {
+                                for (const participantId of participant.participantIds) {
+                                    if (round.participants[participantId]) {
+                                        const participantResult = round.participants[participantId];
+                                        if (participantResult.passFail) {
+                                            if (participantResult.passFail === 'Pass') {
+                                                result = 'P';
+                                                cssClass = 'result-pass';
+                                            } else if (participantResult.passFail === 'Fail') {
+                                                result = 'F';
+                                                cssClass = 'result-fail';
                                             }
                                         }
-                                    } else {
-                                        if (round.participants && Array.isArray(round.participants)) {
-                                            for (const participantId of participant.participantIds) {
-                                                const roundParticipant = round.participants.find(p => p.id === participantId);
-                                                if (roundParticipant) {
-
-                                                    result = '•';
-                                                    break;
-                                                }
-                                            }
+                                        break;
+                                    }
+                                }
+                            } else {
+                                if (round.participants && Array.isArray(round.participants)) {
+                                    for (const participantId of participant.participantIds) {
+                                        const roundParticipant = round.participants.find(p => p.id === participantId);
+                                        if (roundParticipant) {
+                                            result = '•';
+                                            break;
                                         }
                                     }
+                                }
+                            }
+                            return `<td class="${cssClass}">${result}</td>`;
+                        }).join('');
+                    } else {
+                        resultCells = '<td class="result-absent">No Data</td>';
+                    }
+                    
+                    html += `
+                        <tr>
+                            <td>${participant.cwagsNumber || 'TBD'}</td>
+                            <td>${participant.dogName || 'Unknown'}</td>
+                            <td>${participant.handlerName || 'Unknown Handler'}</td>
+                            ${resultCells}
+                        </tr>
+                    `;
+                });
+            } else {
+                const colspan = 3 + (classData.rounds ? classData.rounds.length : 1);
+                html += `
+                    <tr>
+                        <td colspan="${colspan}" style="text-align: center; font-style: italic;">No participants found</td>
+                    </tr>
+                `;
+            }
 
-                                    return `<td class="${cssClass}">${result}</td>`;
-                                }).join('');
-                                
-                                return `
-                                    <tr>
-                                        <td>${participant.cwagsNumber || 'TBD'}</td>
-                                        <td>${participant.dogName || 'Unknown'}</td>
-                                        <td>${participant.handlerName || 'Unknown Handler'}</td>
-                                        ${resultCells}
-                                    </tr>
-                                `;
-                            }).join('')}
+            html += `
                         </tbody>
                     </table>
             `;
 
-            if (isMultiClass) {
-
+            if (isMultiClass && classData.rounds && classData.rounds.length > 0) {
                 let totalRuns = 0;
                 let totalPasses = 0;
                 let totalScheduled = 0;
@@ -2046,11 +2058,9 @@ if (classData.rounds && Array.isArray(classData.rounds)) {
                 classData.rounds.forEach(round => {
                     if (round.hasScores) {
                         Object.entries(round.participants).forEach(([participantId, result]) => {
-
                             const [docId] = participantId.split('_');
                             const participantStillExists = classData.participants.some(p => p.id === docId);
                             if (!participantStillExists) return;
-
 
                             if (result.passFail && result.passFail !== '-') {
                                 totalRuns++;
@@ -2060,7 +2070,6 @@ if (classData.rounds && Array.isArray(classData.rounds)) {
                             }
                         });
                     } else {
-
                         if (round.participants) {
                             if (Array.isArray(round.participants)) {
                                 const validParticipants = round.participants.filter(p => {
@@ -2068,7 +2077,6 @@ if (classData.rounds && Array.isArray(classData.rounds)) {
                                     return classData.participants.some(cp => cp.id === docId);
                                 });
                                 totalScheduled += validParticipants.length;
-
                             }
                         }
                     }
@@ -2077,7 +2085,6 @@ if (classData.rounds && Array.isArray(classData.rounds)) {
                 const passRate = totalRuns > 0 ? ((totalPasses / totalRuns) * 100).toFixed(1) : '0';
 
                 html += `
-
                     <div class="stats">
                         <div class="stat-item">
                             <div class="stat-value">${totalRuns}</div>
@@ -2099,9 +2106,36 @@ if (classData.rounds && Array.isArray(classData.rounds)) {
                 `;
             }
 
-
             html += `</div>`;
             return html;
+        }
+
+        function getClassTypeColor(classType) {
+            switch(classType) {
+                case 'rally': return '#17a2b8';
+                case 'games': return '#ffc107';
+                case 'obedience1':
+                case 'obedience2':
+                case 'obedience3':
+                case 'obedience4':
+                case 'obedience5': return '#28a745';
+                case 'scent': return '#6f42c1';
+                default: return '#6c757d';
+            }
+        }
+
+        function getClassTypeDisplay(classType) {
+            switch(classType) {
+                case 'rally': return '🏃 Rally';
+                case 'games': return '🎯 Games';
+                case 'obedience1':
+                case 'obedience2':
+                case 'obedience3':
+                case 'obedience4':
+                case 'obedience5': return '🐕 Obedience';
+                case 'scent': return '👃 Scent Work';
+                default: return '❓ Unknown';
+            }
         }
 
         // ===== EVENT LISTENERS =====
@@ -2121,37 +2155,7 @@ if (classData.rounds && Array.isArray(classData.rounds)) {
             init();
         });
 
-
         console.log('✅ Enhanced Class Summary Sheet with FEO + Orphaned Score filtering loaded successfully');
-            
-function getClassTypeColor(classType) {
-    switch(classType) {
-        case 'rally': return '#17a2b8';
-        case 'games': return '#ffc107';
-        case 'obedience1':
-        case 'obedience2':
-        case 'obedience3':
-        case 'obedience4':
-        case 'obedience5': return '#28a745';
-        case 'scent': return '#6f42c1';
-        default: return '#6c757d';
-    }
-}
-
-function getClassTypeDisplay(classType) {
-    switch(classType) {
-        case 'rally': return '🏃 Rally';
-        case 'games': return '🎯 Games';
-        case 'obedience1':
-        case 'obedience2':
-        case 'obedience3':
-        case 'obedience4':
-        case 'obedience5': return '🐕 Obedience';
-        case 'scent': return '👃 Scent Work';
-        default: return '❓ Unknown';
-    }
-}
-            
     </script>
 </body>
 </html>
