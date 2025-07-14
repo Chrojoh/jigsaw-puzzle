@@ -972,8 +972,7 @@ function getPassingThreshold(className) {
             }
         }
 
-        // ===== ENHANCED SUMMARY GENERATION =====
-      // ===== ENHANCED SUMMARY GENERATION =====
+   // ===== ENHANCED SUMMARY GENERATION =====
 async function generateSummaryForClass(className) {
     console.log('🎯 ENHANCED: Processing class "' + className + '"');
     
@@ -1132,29 +1131,14 @@ async function generateSummaryForClass(className) {
 
                 const participant = participantMap.get(participantId);
                 
-                // Store result for this round
+                // Store result for this round using the existing processParticipantResult function
                 let result = 'Absent';
-                let cssClass = 'absent';
+                let cssClass = 'result-absent';
                 
-                if (round.isNumericalClass) {
-                    // Handle numerical scoring
-                    if (scores.numericalScore !== undefined && scores.numericalScore !== '') {
-                        result = scores.numericalScore.toString();
-                        if (scores.passIndicator && scores.passIndicator.trim() !== '') {
-                            result += ' (' + scores.passIndicator + ')';
-                        }
-                        cssClass = 'numerical-score';
-                    }
-                } else {
-                    // Handle traditional pass/fail scoring
-                    if (scores.passFail && scores.passFail !== '' && scores.passFail !== 'abs') {
-                        result = scores.passFail;
-                        cssClass = getResultClass(result);
-                    } else if (scores.result && scores.result !== '' && scores.result !== 'abs') {
-                        result = scores.result;
-                        cssClass = getResultClass(result);
-                    }
-                }
+                // Use the existing function that properly handles all class types
+                const processedResult = processParticipantResult(scores);
+                result = processedResult.result;
+                cssClass = processedResult.cssClass;
                 
                 participant.results[round.roundKey] = {
                     result: result,
@@ -1177,7 +1161,6 @@ async function generateSummaryForClass(className) {
         debugInfo: debugInfo
     };
 }
-
         async function generateSummary() {
             const trialId = document.getElementById('trialSelect').value;
             const selectedClass = document.getElementById('classSelect').value;
