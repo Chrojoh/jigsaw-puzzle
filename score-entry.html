@@ -921,68 +921,88 @@ function getCWAGSClassOrder(className) {
             }
         }
 
-        function renderRoundSelector() {
-            const dayTabs = document.getElementById('dayTabs');
-            const dayContents = document.getElementById('dayContents');
-            
-            dayTabs.innerHTML = '';
-            dayContents.innerHTML = '';
+      function renderRoundSelector() {
+    const dayTabs = document.getElementById('dayTabs');
+    const dayContents = document.getElementById('dayContents');
+    
+    dayTabs.innerHTML = '';
+    dayContents.innerHTML = '';
 
-            const roundsByDay = {};
-            allRounds.forEach(round => {
-                if (!roundsByDay[round.dayIndex]) {
-                    roundsByDay[round.dayIndex] = [];
-                }
-                roundsByDay[round.dayIndex].push(round);
-            });
-
-            Object.keys(roundsByDay).forEach((dayIndex, tabIndex) => {
-                const dayData = currentTrial.days[dayIndex];
-                const dayDate = dayData.date ? new Date(dayData.date) : null;
-                const dayLabel = dayDate ? dayDate.toLocaleDateString('en-US', { 
-                    weekday: 'short', 
-                    month: 'short', 
-                    day: 'numeric' 
-                }) : `Day ${parseInt(dayIndex) + 1}`;
-
-                const tab = document.createElement('button');
-                tab.className = `day-tab ${tabIndex === 0 ? 'active' : ''}`;
-                tab.textContent = dayLabel;
-                tab.onclick = () => showDay(dayIndex);
-                dayTabs.appendChild(tab);
-
-                const content = document.createElement('div');
-                content.className = `day-content ${tabIndex === 0 ? 'active' : ''}`;
-                content.id = `day-${dayIndex}`;
-
-                const roundsGrid = document.createElement('div');
-                roundsGrid.className = 'day-rounds';
-
-                roundsByDay[dayIndex].forEach(round => {
-                    const roundCard = document.createElement('div');
-                    roundCard.className = 'round-card';
-                    roundCard.onclick = () => selectRound(round);
-                    
-                    // Detect class type for preview
-                    const classType = detectClassType(round.className);
-                    const config = CLASS_CONFIGS[classType];
-                    
-                    roundCard.innerHTML = `
-                        <h4>${round.className}</h4>
-                        <p><strong>Round:</strong> ${round.roundNumber}</p>
-                        <p><strong>Judge:</strong> ${round.judgeName}</p>
-                        <p><strong>Participants:</strong> ${round.participants.length}</p>
-                        <p><strong>Detected Type:</strong> ${classType.charAt(0).toUpperCase() + classType.slice(1)}</p>
-                        <p><strong>Scoring:</strong> ${config.scoreRange}</p>
-                    `;
-                    
-                    roundsGrid.appendChild(roundCard);
-                });
-
-                content.appendChild(roundsGrid);
-                dayContents.appendChild(content);
-            });
+    const roundsByDay = {};
+    allRounds.forEach(round => {
+        if (!roundsByDay[round.dayIndex]) {
+            roundsByDay[round.dayIndex] = [];
         }
+        roundsByDay[round.dayIndex].push(round);
+    });
+
+    Object.keys(roundsByDay).forEach((dayIndex, tabIndex) => {
+        const dayData = currentTrial.days[dayIndex];
+        const dayDate = dayData.date ? new Date(dayData.date) : null;
+        const dayLabel = dayDate ? dayDate.toLocaleDateString('en-US', { 
+            weekday: 'short', 
+            month: 'short', 
+            day: 'numeric' 
+        }) : `Day ${parseInt(dayIndex) + 1}`;
+
+        const tab = document.createElement('button');
+        tab.className = `day-tab ${tabIndex === 0 ? 'active' : ''}`;
+        tab.textContent = dayLabel;
+        tab.onclick = () => showDay(dayIndex);
+        dayTabs.appendChild(tab);
+
+        const content = document.createElement('div');
+        content.className = `day-content ${tabIndex === 0 ? 'active' : ''}`;
+        content.id = `day-${dayIndex}`;
+
+        const roundsGrid = document.createElement('div');
+        roundsGrid.className = 'day-rounds';
+
+        // SORT ROUNDS BY C-WAGS CLASS ORDER BEFORE DISPLAYING
+        const sortedRounds = roundsByDay[dayIndex].sort((a, b) => {
+            const orderA = getCWAGSClassOrder(a.className);
+            const orderB = getCWAGSClassOrder(b.className);
+            
+            // Primary sort: by C-WAGS class order
+            if (orderA !== orderB) {
+                return orderA - orderB;
+            }
+            
+            // Secondary sort: by round number within same class
+            if (a.roundNumber !== b.roundNumber) {
+                return a.roundNumber - b.roundNumber;
+            }
+            
+            // Tertiary sort: by class name if same order (fallback)
+            return a.className.localeCompare(b.className);
+        });
+
+        // Display the sorted rounds
+        sortedRounds.forEach(round => {
+            const roundCard = document.createElement('div');
+            roundCard.className = 'round-card';
+            roundCard.onclick = () => selectRound(round);
+            
+            // Detect class type for preview
+            const classType = detectClassType(round.className);
+            const config = CLASS_CONFIGS[classType];
+            
+            roundCard.innerHTML = `
+                <h4>${round.className}</h4>
+                <p><strong>Round:</strong> ${round.roundNumber}</p>
+                <p><strong>Judge:</strong> ${round.judgeName}</p>
+                <p><strong>Participants:</strong> ${round.participants.length}</p>
+                <p><strong>Detected Type:</strong> ${classType.charAt(0).toUpperCase() + classType.slice(1)}</p>
+                <p><strong>Scoring:</strong> ${config.scoreRange}</p>
+            `;
+            
+            roundsGrid.appendChild(roundCard);
+        });
+
+        content.appendChild(roundsGrid);
+        dayContents.appendChild(content);
+    });
+}
 
         function showDay(dayIndex) {
             document.querySelectorAll('.day-content').forEach(content => {
