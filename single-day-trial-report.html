@@ -892,9 +892,29 @@ async function generateReport() {
        });
        console.log('📊 Loaded ' + Object.keys(entriesData).length + ' entry documents for filtering');
 
-       // Look for scores
-       console.log('🔍 Looking for scores...');
-       const scoresSnapshot = await db.collection('scores').get();
+       // Look for scores with standardized structure validation
+console.log('🔍 Looking for scores...');
+const scoresSnapshot = await db.collection('scores')
+    .where('trialId', '==', trialId)
+    .get();
+
+// Also validate running order structure for consistency
+try {
+    const runningOrderDoc = await db.collection('running_orders').doc(trialId).get();
+    if (runningOrderDoc.exists) {
+        const runningOrderData = runningOrderDoc.data();
+        
+        // Check if standardized structure exists
+        if (!runningOrderData.finalizedRunningOrders || Object.keys(runningOrderData.finalizedRunningOrders).length === 0) {
+            console.log('⚠️ Missing standardized running order structure for trial:', trialId);
+            showStatus('Running order data may need updating for optimal performance', 'warning');
+        } else {
+            console.log('✅ Standardized running order structure found');
+        }
+    }
+} catch (error) {
+    console.log('No running order found for this trial');
+}
 
        let allRunsData = [];
        let debugInfo = {
