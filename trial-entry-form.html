@@ -1964,13 +1964,21 @@ if (!className) {
                     dogSex: document.getElementById('dogSex').value,
                     [STANDARD_FIELDS.CWAGS_NUMBER]: document.getElementById('cwagsNumber').value.trim(),
                     juniorHandler: document.getElementById('juniorHandler').value === 'Yes',
-                    selectedEntries: selectedEntries.map(entry => ({
-                        ...entry,
-                        // Add class index for running order mapping
-                        classIndex: currentTrialData.days[entry.dayIndex].classes.findIndex(c => 
-                            c.className === entry.className || c[STANDARD_FIELDS.CLASS_NAME] === entry.className
-                        )
-                    })),
+                    selectedEntries: selectedEntries.map(entry => {
+    const classIndex = currentTrialData.days[entry.dayIndex].classes.findIndex(c => 
+        c.className === entry.className || c[STANDARD_FIELDS.CLASS_NAME] === entry.className
+    );
+    
+    return {
+        ...entry,
+        classIndex: classIndex,
+        // Standardized fields for consistency
+        standardizedClassName: entry.className,
+        standardizedRoundNumber: entry.roundNumber || 1,
+        standardizedJudgeName: entry.judgeName || 'TBD',
+        standardizedEntryType: entry.type || 'regular'
+    };
+}),
                     totalFee: totalFee,
                     submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
                     waiverAccepted: true
