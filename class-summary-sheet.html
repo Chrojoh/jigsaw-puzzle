@@ -972,7 +972,7 @@ function getPassingThreshold(className) {
             }
         }
 
-   // ===== ENHANCED SUMMARY GENERATION =====
+// ===== ENHANCED SUMMARY GENERATION =====
 async function generateSummaryForClass(className) {
     console.log('🎯 ENHANCED: Processing class "' + className + '"');
     
@@ -1122,6 +1122,7 @@ async function generateSummaryForClass(className) {
                 if (!participantMap.has(participantId)) {
                     participantMap.set(participantId, {
                         id: participantId,
+                        participantIds: [participantId], // Add this array for compatibility with renderSummary
                         cwagsNumber: scores.cwagsNumber || '',
                         dogName: scores.dogName || '',
                         handlerName: scores.handlerName || '',
