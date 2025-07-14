@@ -762,17 +762,20 @@ function getCWAGSClassOrder(className) {
                 console.log('📊 Running order data structure:', Object.keys(runningOrderData));
                 console.log('📊 Full running order data sample:', runningOrderData);
                 
-                // Check for different possible data structures your system might use
-                let finalizedData = null;
-                
-                if (runningOrderData.finalizedRunningOrders) {
-                    finalizedData = runningOrderData.finalizedRunningOrders;
-                    console.log('✅ Using finalizedRunningOrders');
-                } else if (runningOrderData.generatedSheets) {
-                    finalizedData = runningOrderData.generatedSheets;
-                    console.log('✅ Using generatedSheets');
-                } else if (runningOrderData.roundOrders) {
-                    console.log('✅ Using roundOrders structure');
+               // Always prioritize finalizedRunningOrders as the standard structure
+let finalizedData = runningOrderData.finalizedRunningOrders || {};
+
+console.log('📊 Primary data structure check - finalizedRunningOrders keys:', Object.keys(finalizedData));
+
+// If finalizedRunningOrders is empty, fall back to legacy structures
+if (Object.keys(finalizedData).length === 0) {
+    console.log('⚠️ finalizedRunningOrders is empty, checking legacy structures');
+    
+    if (runningOrderData.generatedSheets && Object.keys(runningOrderData.generatedSheets).length > 0) {
+        finalizedData = runningOrderData.generatedSheets;
+        console.log('✅ Using generatedSheets fallback');
+    } else if (runningOrderData.roundOrders) {
+        console.log('✅ Converting from legacy roundOrders structure');
                     console.log('roundOrders type:', typeof runningOrderData.roundOrders);
                     console.log('roundOrders content:', runningOrderData.roundOrders);
                     
