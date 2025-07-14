@@ -704,30 +704,103 @@
         }
 
         // ===== ENHANCED RESULT PROCESSING =====
-        function processParticipantResult(participantResult) {
-            // Check for enhanced numerical scoring (Rally, Games, Obedience)
-            if (participantResult.numericalScore !== undefined && participantResult.passIndicator !== undefined) {
-                console.log('📊 Found numerical score:', participantResult.numericalScore, 'Pass indicator:', participantResult.passIndicator);
-                
-                if (participantResult.passIndicator && participantResult.passIndicator.trim() !== '') {
-                    // Show actual pass indicator instead of just "P"
-                    return { result: participantResult.passIndicator, cssClass: 'result-pass' };
-                } else if (participantResult.numericalScore !== undefined && participantResult.numericalScore !== '') {
-                    return { result: 'F', cssClass: 'result-fail' };
-                }
-            }
-            
-            // Check for traditional scent work scoring
-            if (participantResult.passFail) {
-                if (participantResult.passFail === 'Pass') {
-                    return { result: 'P', cssClass: 'result-pass' };
-                } else if (participantResult.passFail === 'Fail') {
-                    return { result: 'F', cssClass: 'result-fail' };
-                }
-            }
-            
-            return { result: '-', cssClass: 'result-absent' };
+        // Replace the processParticipantResult function in class-summary-sheet.html
+// This fixed version properly handles numerical scores for Rally, Games, and Obedience
+
+function processParticipantResult(participantResult) {
+    console.log('🔍 Processing participant result:', participantResult);
+    
+    // Check for enhanced numerical scoring (Rally, Games, Obedience)
+    if (participantResult.numericalScore !== undefined) {
+        const score = parseFloat(participantResult.numericalScore);
+        const passIndicator = participantResult.passIndicator;
+        
+        console.log('📊 Found numerical score:', score, 'Pass indicator:', passIndicator);
+        
+        // If there's a pass indicator, use it (for Games subclasses like "GB", "BJ", etc.)
+        if (passIndicator && passIndicator.trim() !== '') {
+            console.log('✅ Using pass indicator:', passIndicator);
+            return { result: passIndicator, cssClass: 'result-pass' };
         }
+        
+        // If there's a numerical score, evaluate it against passing standards
+        if (!isNaN(score) && score !== '') {
+            // Determine passing threshold based on typical C-WAGS standards
+            let passingScore = 70; // Default for most classes
+            
+            // Obedience 5 has a higher threshold (120/150)
+            if (participantResult.className && participantResult.className.toLowerCase().includes('obedience 5')) {
+                passingScore = 120;
+            }
+            
+            if (score >= passingScore) {
+                console.log('✅ Numerical score passes:', score, '>=', passingScore);
+                return { result: 'P', cssClass: 'result-pass' };
+            } else {
+                console.log('❌ Numerical score fails:', score, '<', passingScore);
+                return { result: 'F', cssClass: 'result-fail' };
+            }
+        }
+        
+        // If we have numericalScore field but no actual score, treat as absent
+        console.log('⚠️ Numerical score field exists but no valid score');
+        return { result: '-', cssClass: 'result-absent' };
+    }
+    
+    // Check for traditional scent work scoring
+    if (participantResult.passFail) {
+        console.log('🔍 Found passFail:', participantResult.passFail);
+        if (participantResult.passFail === 'Pass') {
+            return { result: 'P', cssClass: 'result-pass' };
+        } else if (participantResult.passFail === 'Fail') {
+            return { result: 'F', cssClass: 'result-fail' };
+        }
+    }
+    
+    // Fallback: check for any other result indicators
+    if (participantResult.result) {
+        console.log('🔍 Found result field:', participantResult.result);
+        const result = participantResult.result.toString().trim();
+        if (result === 'Pass' || result === 'P') {
+            return { result: 'P', cssClass: 'result-pass' };
+        } else if (result === 'Fail' || result === 'F') {
+            return { result: 'F', cssClass: 'result-fail' };
+        } else if (result !== '' && result !== '-') {
+            // Any other non-empty result (like games subclasses)
+            return { result: result, cssClass: 'result-pass' };
+        }
+    }
+    
+    console.log('⚠️ No valid result found, marking as absent');
+    return { result: '-', cssClass: 'result-absent' };
+}
+
+// Also add this helper function to better identify class types
+function getClassPassingScore(className) {
+    if (!className) return 70;
+    
+    const lowerClassName = className.toLowerCase();
+    
+    // Obedience 5 has higher threshold
+    if (lowerClassName.includes('obedience') && lowerClassName.includes('5')) {
+        return 120;
+    }
+    
+    // All other numerical classes use 70
+    if (lowerClassName.includes('obedience') || 
+        lowerClassName.includes('rally') || 
+        lowerClassName.includes('games') ||
+        lowerClassName.includes('starter') ||
+        lowerClassName.includes('advanced') ||
+        lowerClassName.includes('pro') ||
+        lowerClassName.includes('arf') ||
+        lowerClassName.includes('zoom')) {
+        return 70;
+    }
+    
+    // Default
+    return 70;
+}
 
         // ===== FEO + ORPHANED SCORE DETECTION =====
         function shouldExcludeParticipantEnhanced(participant, participantId) {
