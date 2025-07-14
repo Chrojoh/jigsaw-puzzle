@@ -2087,14 +2087,21 @@ if (!existingParticipant) {
 }
                 });
                 
-                // Save updated running order
-                await db.collection('running_orders').doc(entryData.trialId).set({
-                    trialId: entryData.trialId,
-                    trialName: entryData.trialName,
-                    roundOrders: roundOrders,
-                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
-                    updatedBy: entryData.submittedBy || 'entry_form'
-                }, { merge: true });
+               // Save both legacy and standardized structures
+await db.collection('running_orders').doc(entryData.trialId).set({
+    trialId: entryData.trialId,
+    trialName: entryData.trialName,
+    
+    // Standardized structure (primary)
+    finalizedRunningOrders: finalizedRunningOrders,
+    
+    // Legacy structures (for backward compatibility)
+    roundOrders: roundOrders,
+    generatedSheets: finalizedRunningOrders,
+    
+    lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
+    updatedBy: entryData.submittedBy || 'entry_form'
+}, { merge: true });
                 
                 console.log('📊 Running order updated successfully');
                 
