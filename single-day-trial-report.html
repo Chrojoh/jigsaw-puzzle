@@ -545,1090 +545,904 @@
         </div>
     </div>
 
-    <script>
-        console.log('🎯 Enhanced Single-Day Trial Report (FIXED VERSION) starting...');
-
-        // Firebase Configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyBWpyM_lEpqdQWuKuLLZiW1SlloWsWkJCs",
-            authDomain: "dog-trialing-system.firebaseapp.com",
-            projectId: "dog-trialing-system",
-            storageBucket: "dog-trialing-system.firebasestorage.app",
-            messagingSenderId: "490812593982",
-            appId: "1:490812593982:web:344776707566f8d9027e6f",
-            measurementId: "G-EMLX58Y278"
-        };
-
-        // Initialize Firebase immediately
-        let auth, db, currentUser = null, currentTrial = null, currentDay = null;
-        let reportData = {}, activeDiscipline = 'scent';
-        let participantCache = new Map();
-        let entriesData = {};
-        let debugInfo = {
-            totalProcessed: 0,
-            feoFiltered: 0,
-            orphanedFiltered: 0,
-            regularIncluded: 0
-        };
-
-        // Enhanced round key utilities
-        function validateRoundKey(roundKey) {
-            try {
-                if (!roundKey || typeof roundKey !== 'string') return false;
-                if (roundKey.includes('--')) return false;
-                if (roundKey.includes('_')) return false;
-                if (roundKey.includes('.')) return false;
-                if (roundKey.includes(' ')) return false;
-                
-                const parts = roundKey.split('-');
-                if (parts.length !== 3) return false;
-                
-                return parts.every(part => {
-                    const num = parseInt(part);
-                    return !isNaN(num) && num >= 0 && part === num.toString();
-                });
-            } catch (error) {
-                return false;
-            }
-        }
-
-        function fixRoundKey(malformedKey) {
-            if (!malformedKey || typeof malformedKey !== 'string') {
-                return null;
-            }
-            
-            console.log(`🔧 Attempting to fix round key: "${malformedKey}"`);
-            
-            let fixed = malformedKey;
-            fixed = fixed.replace(/--+/g, '-');
-            fixed = fixed.replace(/_/g, '-');
-            fixed = fixed.replace(/\./g, '-');
-            fixed = fixed.replace(/\s/g, '');
-            
-            const parts = fixed.split('-');
-            const cleanParts = parts.filter(part => part !== '');
-            
-            if (cleanParts.length === 3) {
-                fixed = cleanParts.join('-');
-            }
-            
-            if (validateRoundKey(fixed)) {
-                console.log(`✅ Fixed round key: "${malformedKey}" -> "${fixed}"`);
-                return fixed;
-            }
-            
-            console.log(`❌ Unable to fix round key: "${malformedKey}"`);
-            return null;
-        }
-
-        function getRoundKeyIndices(roundKey) {
-            if (validateRoundKey(roundKey)) {
-                try {
-                    const parts = roundKey.split('-');
-                    return {
-                        dayIndex: parseInt(parts[0]),
-                        classIndex: parseInt(parts[1]),
-                        roundIndex: parseInt(parts[2]),
-                        standardKey: roundKey
-                    };
-                } catch (error) {
-                    console.error('Error parsing valid round key:', error);
-                }
-            }
-            
-            const fixed = fixRoundKey(roundKey);
-            if (fixed) {
-                console.warn(`⚠️ Using fixed round key: "${roundKey}" -> "${fixed}"`);
-                try {
-                    const parts = fixed.split('-');
-                    return {
-                        dayIndex: parseInt(parts[0]),
-                        classIndex: parseInt(parts[1]),
-                        roundIndex: parseInt(parts[2]),
-                        standardKey: fixed
-                    };
-                } catch (error) {
-                    console.error('Error parsing fixed round key:', error);
-                }
-            }
-            
-            console.error(`❌ Invalid round key: "${roundKey}"`);
-            return null;
-        }
-
-        // FEO detection
-        function isFeoEntry(entryType) {
-            if (!entryType) return false;
-            const typeStr = entryType.toString().toLowerCase().trim();
-            return typeStr === 'feo' || typeStr === 'for exhibition only' || typeStr === 'exhibition';
-        }
-
-        function shouldExcludeParticipantEnhanced(participant, participantId) {
-            // Check for orphaned scores (deleted entries)
-            const [docId] = participantId.split('_');
-            const originalEntry = entriesData[docId];
-            
-            if (!originalEntry) {
-                console.log(`🚫 ORPHANED SCORE detected (entry deleted): ${participantId}`);
-                debugInfo.orphanedFiltered++;
-                return true;
-            }
-
-            // Check multiple possible FEO indicators
-            if (participant.entryType && isFeoEntry(participant.entryType)) {
-                console.log(`🚫 FEO detected via entryType: ${participantId} (${participant.entryType})`);
-                debugInfo.feoFiltered++;
-                return true;
-            }
-
-            if (participant.type && isFeoEntry(participant.type)) {
-                console.log(`🚫 FEO detected via type: ${participantId} (${participant.type})`);
-                debugInfo.feoFiltered++;
-                return true;
-            }
-
-            if (participantId && participantId.toLowerCase().includes('feo')) {
-                console.log(`🚫 FEO detected in participantId: ${participantId}`);
-                debugInfo.feoFiltered++;
-                return true;
-            }
-
-            if (participant.comments && participant.comments.toLowerCase().includes('feo')) {
-                console.log(`🚫 FEO detected in comments: ${participantId} (${participant.comments})`);
-                debugInfo.feoFiltered++;
-                return true;
-            }
-
-            // Check original entries data for FEO status
-            if (originalEntry.selectedEntries) {
-                const parts = participantId.split('_');
-                if (parts.length > 1) {
-                    const entryDetails = parts[1];
-                    let parsedClassName = '';
-                    
-                    const classNames = [
-                        'Patrol 1', 'Detective 2', 'Investigator 3', 'Super Sleuth 4',
-                        'Private Inv', 'Det Diversions', 'Ranger 1', 'Ranger 2', 
-                        'Ranger 3', 'Ranger 4', 'Ranger 5', 'Dasher 3', 'Dasher 4', 
-                        'Dasher 5', 'Dasher 6'
-                    ];
-                    
-                    for (const className of classNames) {
-                        if (entryDetails.includes(className)) {
-                            parsedClassName = className;
-                            break;
-                        }
-                    }
-
-                    if (parsedClassName) {
-                        const matchingEntry = originalEntry.selectedEntries.find(se => 
-                            se.className === parsedClassName
-                        );
-                        if (matchingEntry && matchingEntry.type && isFeoEntry(matchingEntry.type)) {
-                            console.log(`🚫 FEO detected via original entries: ${participantId} (${matchingEntry.type})`);
-                            debugInfo.feoFiltered++;
-                            return true;
-                        }
-                    }
-                }
-            }
-
-            debugInfo.regularIncluded++;
-            return false;
-        }
-
-        // Discipline classifications
-        const DISCIPLINE_MAPPING = {
-            scent: ['PATROL 1', 'DETECTIVE 2', 'INVESTIGATOR 3', 'SUPER SLEUTH 4', 'PRIVATE INV', 'DET DIVERSIONS'],
-            games: ['GAMES 1', 'GAMES 2', 'GAMES 3', 'GAMES 4'],
-            obedience: ['OBEDIENCE 1', 'OBEDIENCE 2', 'OBEDIENCE 3', 'OBEDIENCE 4', 'OBEDIENCE 5'],
-            ranger: ['RANGER 1', 'RANGER 2', 'RANGER 3', 'RANGER 4', 'RANGER 5', 'DASHER 3', 'DASHER 4', 'DASHER 5', 'DASHER 6']
-        };
-
-        function getDisciplineForClass(className) {
-            const upperClassName = className.toUpperCase();
-            
-            for (const [discipline, classes] of Object.entries(DISCIPLINE_MAPPING)) {
-                if (classes.some(cls => upperClassName.includes(cls) || cls.includes(upperClassName))) {
-                    return discipline;
-                }
-            }
-            
-            // Additional fuzzy matching
-            if (upperClassName.includes('PATROL') || upperClassName.includes('DETECTIVE') || 
-                upperClassName.includes('INVESTIGATOR') || upperClassName.includes('SLEUTH') || 
-                upperClassName.includes('PRIVATE') || upperClassName.includes('SCENT')) {
-                return 'scent';
-            }
-            if (upperClassName.includes('GAME')) {
-                return 'games';
-            }
-            if (upperClassName.includes('OBEDIENCE') || upperClassName.includes('RALLY')) {
-                return 'obedience';
-            }
-            if (upperClassName.includes('RANGER') || upperClassName.includes('DASHER')) {
-                return 'ranger';
-            }
-            
-            return 'scent'; // Default to scent
-        }
-
-        // Utility functions
-        function showStatus(message, type = 'info') {
-            const statusDiv = document.getElementById('statusMessage');
-            statusDiv.textContent = message;
-            statusDiv.className = `status-message status-${type}`;
-            statusDiv.style.display = 'block';
-            
-            setTimeout(() => {
-                statusDiv.style.display = 'none';
-            }, 5000);
-        }
-
-        function showDebug(content) {
-            console.log('Debug:', content);
-            const debugDiv = document.getElementById('debugInfo');
-            const debugContent = document.getElementById('debugContent');
-            debugContent.innerHTML = content;
-            debugDiv.style.display = 'block';
-        }
-
-        function createLocalDate(dateStr) {
-            if (!dateStr) return null;
-            if (typeof dateStr === 'string') {
-                const dateWithTime = dateStr.includes('T') ? dateStr : dateStr + 'T12:00:00';
-                return new Date(dateWithTime);
-            }
-            return new Date(dateStr);
-        }
-
-        function formatLocalDate(date) {
-            if (!date || !(date instanceof Date)) return '';
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
-        }
-
-        function getDateFromFirebase(firebaseDate) {
-            if (!firebaseDate) return '';
-            let date;
-            if (firebaseDate.toDate) {
-                date = firebaseDate.toDate();
-            } else if (firebaseDate instanceof Date) {
-                date = firebaseDate;
-            } else if (typeof firebaseDate === 'string') {
-                date = createLocalDate(firebaseDate);
-            } else {
-                return '';
-            }
-            return formatLocalDate(date);
-        }
-
-        // Initialize Firebase and start the application
-        async function init() {
-            try {
-                console.log('🚀 Starting FIXED initialization...');
-                
-                // Initialize Firebase
-                firebase.initializeApp(firebaseConfig);
-                auth = firebase.auth();
-                db = firebase.firestore();
-                console.log('✅ Firebase initialized');
-                
-                // Wait for authentication
-                await new Promise((resolve, reject) => {
-                    const unsubscribe = auth.onAuthStateChanged(async (user) => {
-                        unsubscribe();
-                        
-                        if (user) {
-                            try {
-                                const userDoc = await db.collection('users').doc(user.uid).get();
-                                if (userDoc.exists) {
-                                    currentUser = { uid: user.uid, ...userDoc.data() };
-                                    console.log('✅ User authenticated:', currentUser.uid);
-                                    resolve();
-                                } else {
-                                    reject(new Error('User profile not found'));
-                                }
-                            } catch (error) {
-                                reject(error);
-                            }
-                        } else {
-                            console.log('🔄 Redirecting to login...');
-                            window.location.href = 'index.html';
-                        }
-                    });
-                });
-
-                console.log('📊 Loading trials...');
-                await loadTrials();
-                console.log('✅ FIXED initialization complete');
-                
-            } catch (error) {
-                console.error('❌ Error initializing:', error);
-                showStatus('Error initializing application: ' + error.message, 'error');
-            }
-        }
-
-        // Load trials for the dropdown
-        async function loadTrials() {
-            try {
-                console.log('🔍 Loading trials for user:', currentUser?.uid);
-                showStatus('Loading your trials...', 'info');
-
-                const trialsSnapshot = await db.collection("trials")
-                    .where("createdBy", "==", currentUser.uid)
-                    .get();
-
-                console.log('📊 Found', trialsSnapshot.size, 'trials');
-
-                const trialSelect = document.getElementById('trialSelect');
-                trialSelect.innerHTML = '<option value="">Select a trial...</option>';
-
-                if (!trialsSnapshot.empty) {
-                    const trials = [];
-                    trialsSnapshot.forEach(doc => {
-                        trials.push({ id: doc.id, ...doc.data() });
-                    });
-
-                    trials.sort((a, b) => {
-                        const aTime = a.createdAt ? a.createdAt.seconds : 0;
-                        const bTime = b.createdAt ? b.createdAt.seconds : 0;
-                        return bTime - aTime;
-                    });
-
-                    trials.forEach(trial => {
-                        const option = document.createElement('option');
-                        option.value = trial.id;
-                        
-                        let trialLabel = trial.clubName || 'Unnamed Trial';
-                        
-                        if (trial.days && trial.days.length > 0) {
-                            const dates = trial.days
-                                .filter(day => day.date)
-                                .map(day => {
-                                    const localDate = createLocalDate(day.date);
-                                    return localDate ? localDate.toLocaleDateString('en-US', { 
-                                        month: 'short', 
-                                        day: 'numeric',
-                                        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
-                                    }) : '';
-                                })
-                                .filter(date => date)
-                                .join(', ');
-                            if (dates) {
-                                trialLabel += ` (${dates})`;
-                            }
-                        }
-                        
-                        option.textContent = trialLabel;
-                        trialSelect.appendChild(option);
-                    });
-
-                    showStatus(`Found ${trials.length} trials`, 'success');
-                    console.log('✅ Trials loaded successfully');
-                } else {
-                    showStatus('No trials found for your account', 'error');
-                    console.log('⚠️ No trials found for user');
-                }
-            } catch (error) {
-                console.error('❌ Error loading trials:', error);
-                showStatus('Error loading trials: ' + error.message, 'error');
-            }
-        }
-
-        // Load trial data and populate day selector
-        async function loadTrialData() {
-            const trialId = document.getElementById('trialSelect').value;
-            const daySelect = document.getElementById('daySelect');
-            
-            if (!trialId) {
-                daySelect.innerHTML = '<option value="">Select a trial first</option>';
-                return;
-            }
-
-            try {
-                showStatus('Loading trial data...', 'info');
-
-                const trialDoc = await db.collection('trials').doc(trialId).get();
-                if (!trialDoc.exists) {
-                    throw new Error('Trial not found');
-                }
-
-                currentTrial = { id: trialDoc.id, ...trialDoc.data() };
-
-                // Fix date handling for trial days
-                if (currentTrial.days && Array.isArray(currentTrial.days)) {
-                    currentTrial.days = currentTrial.days.map(day => ({
-                        ...day,
-                        date: day.date ? getDateFromFirebase(day.date) : null
-                    }));
-                }
-
-                // Populate day dropdown
-                daySelect.innerHTML = '<option value="">Select a day...</option>';
-                
-                if (currentTrial.days && currentTrial.days.length > 0) {
-                    currentTrial.days.forEach((day, index) => {
-                        const option = document.createElement('option');
-                        option.value = index;
-                        const dayDate = day.date ? new Date(day.date + 'T12:00:00').toLocaleDateString() : `Day ${index + 1}`;
-                        option.textContent = dayDate;
-                        daySelect.appendChild(option);
-                    });
-                    
-                    showStatus(`Found ${currentTrial.days.length} days`, 'success');
-                } else {
-                    showStatus('No days found in this trial', 'error');
-                }
-
-            } catch (error) {
-                console.error('Error loading trial data:', error);
-                showStatus('Error loading trial data: ' + error.message, 'error');
-            }
-        }
-
-        // FIXED Generate reports function
-        async function generateReports() {
-            const trialId = document.getElementById('trialSelect').value;
-            const dayIndex = document.getElementById('daySelect').value;
-            
-            if (!trialId || dayIndex === '') {
-                showStatus('Please select both trial and day', 'error');
-                return;
-            }
-
-            try {
-                showStatus('Generating enhanced reports...', 'info');
-                currentDay = parseInt(dayIndex);
-
-                // Reset debug info
-                debugInfo = {
-                    totalProcessed: 0,
-                    feoFiltered: 0,
-                    orphanedFiltered: 0,
-                    regularIncluded: 0
-                };
-
-                console.log('📂 Loading entries data for enhanced filtering...');
-                const entriesSnapshot = await db.collection('entries')
-                    .where('trialId', '==', trialId)
-                    .get();
-
-                entriesData = {};
-                entriesSnapshot.forEach(doc => {
-                    entriesData[doc.id] = doc.data();
-                });
-                console.log(`📊 Loaded ${Object.keys(entriesData).length} entry documents for filtering`);
-
-                console.log('🔍 Looking for scores...');
-                const scoresSnapshot = await db.collection('scores')
-                    .where('trialId', '==', trialId)
-                    .get();
-
-                const allRuns = [];
-                let foundScores = false;
-
-                // Process scores with enhanced filtering
-                for (const doc of scoresSnapshot.docs) {
-                    const scoreData = doc.data();
-                    console.log('🔍 Processing score document:', doc.id, scoreData.className);
-                    
-                    if (scoreData.roundKey) {
-                        const indices = getRoundKeyIndices(scoreData.roundKey);
-                        if (indices && indices.dayIndex === currentDay && scoreData.participants) {
-                            foundScores = true;
-                            console.log('✅ Found scores for day', currentDay, ':', Object.keys(scoreData.participants).length, 'participants');
-                            
-                            for (const [participantId, result] of Object.entries(scoreData.participants)) {
-                                if (result.passFail) {
-                                    debugInfo.totalProcessed++;
-
-                                    // Enhanced filtering: Skip FEO and orphaned entries
-                                    if (shouldExcludeParticipantEnhanced(result, participantId)) {
-                                        continue;
-                                    }
-                                    
-                                    // Get participant details from cached entries data
-                                    const [docId] = participantId.split('_');
-                                    const entry = entriesData[docId];
-                                    
-                                    if (entry) {
-                                        const discipline = getDisciplineForClass(scoreData.className);
-                                        const dayDate = currentTrial.days[currentDay].date || '';
-                                        const formattedDate = dayDate ? new Date(dayDate + 'T12:00:00').toLocaleDateString() : '';
-                                        
-                                        allRuns.push({
-                                            discipline: discipline,
-                                            cwagsNumber: entry.cwagsNumber || 'TBD',
-                                            dogName: entry.dogCallName || 'Unknown',
-                                            handlerName: entry.handlerName || 'Unknown Handler',
-                                            date: formattedDate,
-                                            className: scoreData.className,
-                                            roundNumber: scoreData.roundNumber || 1,
-                                            result: result.passFail === 'Pass' ? 'Pass' : 'Fail',
-                                            judgeName: scoreData.judgeName || 'TBD',
-                                            comments: result.comments || '',
-                                            classOrder: getClassOrder(scoreData.className, discipline)
-                                        });
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                console.log('📊 Total runs found:', allRuns.length);
-                console.log('🔧 Enhanced Filtering Results:', debugInfo);
-
-                // Show debug information
-                showDebug(`
-                    <strong>Enhanced Filtering Results:</strong><br>
-                    Total entries processed: ${debugInfo.totalProcessed}<br>
-                    Regular entries included: ${debugInfo.regularIncluded}<br>
-                    FEO entries filtered out: ${debugInfo.feoFiltered}<br>
-                    Orphaned scores filtered out: ${debugInfo.orphanedFiltered}<br>
-                    Final report entries: ${allRuns.length}
-                `);
-
-                if (allRuns.length === 0) {
-                    showStatus('No score data found for this day. Ensure scores have been entered.', 'error');
-                    document.getElementById('noDataMessage').style.display = 'block';
-                    document.getElementById('disciplineTabs').style.display = 'none';
-                    return;
-                }
-
-                // Group by discipline and sort properly
-                reportData = {
-                    scent: allRuns.filter(r => r.discipline === 'scent').sort((a, b) => {
-                        if (a.classOrder !== b.classOrder) return a.classOrder - b.classOrder;
-                        if (a.roundNumber !== b.roundNumber) return a.roundNumber - b.roundNumber;
-                        const aCwags = a.cwagsNumber === 'TBD' ? 'ZZZ999' : a.cwagsNumber;
-                        const bCwags = b.cwagsNumber === 'TBD' ? 'ZZZ999' : b.cwagsNumber;
-                        return aCwags.localeCompare(bCwags);
-                    }),
-                    games: allRuns.filter(r => r.discipline === 'games').sort((a, b) => {
-                        if (a.classOrder !== b.classOrder) return a.classOrder - b.classOrder;
-                        if (a.roundNumber !== b.roundNumber) return a.roundNumber - b.roundNumber;
-                        const aCwags = a.cwagsNumber === 'TBD' ? 'ZZZ999' : a.cwagsNumber;
-                        const bCwags = b.cwagsNumber === 'TBD' ? 'ZZZ999' : b.cwagsNumber;
-                        return aCwags.localeCompare(bCwags);
-                    }),
-                    obedience: allRuns.filter(r => r.discipline === 'obedience').sort((a, b) => {
-                        if (a.classOrder !== b.classOrder) return a.classOrder - b.classOrder;
-                        if (a.roundNumber !== b.roundNumber) return a.roundNumber - b.roundNumber;
-                        const aCwags = a.cwagsNumber === 'TBD' ? 'ZZZ999' : a.cwagsNumber;
-                        const bCwags = b.cwagsNumber === 'TBD' ? 'ZZZ999' : b.cwagsNumber;
-                        return aCwags.localeCompare(bCwags);
-                    }),
-                    ranger: allRuns.filter(r => r.discipline === 'ranger').sort((a, b) => {
-                        if (a.classOrder !== b.classOrder) return a.classOrder - b.classOrder;
-                        if (a.roundNumber !== b.roundNumber) return a.roundNumber - b.roundNumber;
-                        const aCwags = a.cwagsNumber === 'TBD' ? 'ZZZ999' : a.cwagsNumber;
-                        const bCwags = b.cwagsNumber === 'TBD' ? 'ZZZ999' : b.cwagsNumber;
-                        return aCwags.localeCompare(bCwags);
-                    })
-                };
-
-                console.log('📊 Discipline breakdown:', {
-                    scent: reportData.scent.length,
-                    games: reportData.games.length,
-                    obedience: reportData.obedience.length,
-                    ranger: reportData.ranger.length
-                });
-
-                renderReports();
-                document.getElementById('disciplineTabs').style.display = 'flex';
-                document.getElementById('noDataMessage').style.display = 'none';
-                
-                let statusMessage = 'Enhanced reports generated successfully!';
-                if (debugInfo.feoFiltered > 0) statusMessage += ` (${debugInfo.feoFiltered} FEO entries filtered)`;
-                if (debugInfo.orphanedFiltered > 0) statusMessage += ` (${debugInfo.orphanedFiltered} orphaned scores filtered)`;
-                showStatus(statusMessage, 'success');
-
-            } catch (error) {
-                console.error('Error generating enhanced reports:', error);
-                showStatus('Error generating reports: ' + error.message, 'error');
-            }
-        }
-
-        // Get class order for sorting
-        function getClassOrder(className, discipline) {
-            const upperClassName = className.toUpperCase();
-            
-            if (discipline === 'scent') {
-                if (upperClassName.includes('PATROL 1')) return 1;
-                if (upperClassName.includes('DETECTIVE 2')) return 2;
-                if (upperClassName.includes('INVESTIGATOR 3')) return 3;
-                if (upperClassName.includes('SUPER SLEUTH 4')) return 4;
-                if (upperClassName.includes('PRIVATE')) return 5;
-                if (upperClassName.includes('DET DIVERSIONS')) return 6;
-            } else if (discipline === 'games') {
-                if (upperClassName.includes('GAMES 1')) return 1;
-                if (upperClassName.includes('GAMES 2')) return 2;
-                if (upperClassName.includes('GAMES 3')) return 3;
-                if (upperClassName.includes('GAMES 4')) return 4;
-            } else if (discipline === 'obedience') {
-                if (upperClassName.includes('OBEDIENCE 1')) return 1;
-                if (upperClassName.includes('OBEDIENCE 2')) return 2;
-                if (upperClassName.includes('OBEDIENCE 3')) return 3;
-                if (upperClassName.includes('OBEDIENCE 4')) return 4;
-                if (upperClassName.includes('OBEDIENCE 5')) return 5;
-            } else if (discipline === 'ranger') {
-                if (upperClassName.includes('RANGER 1')) return 1;
-                if (upperClassName.includes('RANGER 2')) return 2;
-                if (upperClassName.includes('RANGER 3')) return 3;
-                if (upperClassName.includes('RANGER 4')) return 4;
-                if (upperClassName.includes('RANGER 5')) return 5;
-                if (upperClassName.includes('DASHER 3')) return 6;
-                if (upperClassName.includes('DASHER 4')) return 7;
-                if (upperClassName.includes('DASHER 5')) return 8;
-                if (upperClassName.includes('DASHER 6')) return 9;
-            }
-            
-            return 999; // Default for unrecognized classes
-        }
-
-        // Render all reports
-        function renderReports() {
-            ['scent', 'games', 'obedience', 'ranger'].forEach(discipline => {
-                renderDisciplineReport(discipline);
-            });
-        }
-
-        // FIXED Render specific discipline report
-        function renderDisciplineReport(discipline) {
-            const runs = reportData[discipline] || [];
-            const tbody = document.getElementById(`${discipline}TableBody`);
-            const info = document.getElementById(`${discipline}ReportInfo`);
-            const stats = document.getElementById(`${discipline}Stats`);
-            
-            if (!tbody || !info || !stats) {
-                console.log('⚠️ Report elements not found for discipline:', discipline);
-                return;
-            }
-            
-            // Update info
-            const dayDate = currentTrial.days[currentDay].date ? 
-                new Date(currentTrial.days[currentDay].date + 'T12:00:00').toLocaleDateString() : 'Date TBD';
-            info.textContent = `${currentTrial.clubName} • ${dayDate} • ${runs.length} entries`;
-            
-            // Generate statistics
-            const totalRuns = runs.length;
-            const passes = runs.filter(r => r.result === 'Pass' || r.result === 'P').length;
-            const fails = runs.filter(r => r.result === 'Fail' || r.result === 'F').length;
-            const scheduled = runs.filter(r => r.result === 'Scheduled' || r.result === 'Entry Only').length;
-            const passRate = (totalRuns - scheduled) > 0 ? (((passes / (totalRuns - scheduled)) * 100).toFixed(1)) : '0';
-            
-            stats.innerHTML = `
-                <div class="stat-card">
-                    <div class="stat-value">${totalRuns}</div>
-                    <div class="stat-label">Total Entries</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value">${passes}</div>
-                    <div class="stat-label">Passes</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value">${fails}</div>
-                    <div class="stat-label">Fails</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value">${scheduled}</div>
-                    <div class="stat-label">Not Scored</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value">${passRate}%</div>
-                    <div class="stat-label">Pass Rate</div>
-                </div>
-            `;
-            
-            // Generate table rows
-            tbody.innerHTML = '';
-            
-            if (runs.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="9" style="text-align: center; color: #6c757d; font-style: italic; padding: 2rem;">
-                            No ${discipline} entries found for this day
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-            
-            runs.forEach(run => {
-                const row = document.createElement('tr');
-                
-                let resultClass = 'result-absent';
-                if (run.result === 'Pass') resultClass = 'result-pass';
-                else if (run.result === 'Fail') resultClass = 'result-fail';
-                
-                row.innerHTML = `
-                    <td style="font-weight: bold;">${run.cwagsNumber}</td>
-                    <td>${run.dogName}</td>
-                    <td>${run.handlerName}</td>
-                    <td>${run.date}</td>
-                    <td style="font-size: 0.8rem;">${run.className}</td>
-                    <td style="text-align: center;">${run.roundNumber}</td>
-                    <td class="${resultClass}" style="text-align: center; font-weight: bold;">${run.result}</td>
-                    <td style="font-size: 0.8rem;">${run.judgeName}</td>
-                    <td style="background: #f8f9fa; font-size: 0.8rem;">${run.comments}</td>
-                `;
-                
-                tbody.appendChild(row);
-            });
-            
-            // Show the report container
-            document.getElementById(`${discipline}Report`).style.display = 'block';
-        }
-
-        // FIXED Show different disciplines
-        function showDiscipline(discipline) {
-            // Hide all report containers
-            document.querySelectorAll('.report-container').forEach(container => {
-                container.style.display = 'none';
-            });
-            
-            // Remove active class from all tabs
-            document.querySelectorAll('.discipline-tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            
-            // Show selected discipline and make tab active
-            document.getElementById(`${discipline}Report`).style.display = 'block';
-            
-            // Find and activate the clicked tab
-            const tabs = document.querySelectorAll('.discipline-tab');
-            tabs.forEach(tab => {
-                if (tab.textContent.toLowerCase().includes(discipline) || 
-                    (discipline === 'scent' && tab.textContent.includes('Scent')) ||
-                    (discipline === 'games' && tab.textContent.includes('Games')) ||
-                    (discipline === 'obedience' && tab.textContent.includes('Obedience')) ||
-                    (discipline === 'ranger' && tab.textContent.includes('Ranger'))) {
-                    tab.classList.add('active');
-                }
-            });
-            
-            // Render the report
-            if (reportData && reportData[discipline]) {
-                renderDisciplineReport(discipline);
-            }
-            
-            activeDiscipline = discipline;
-        }
-
-        // WORKING Export Functions
-        function exportDisciplineCSV(discipline) {
-            console.log('📄 Exporting CSV for', discipline);
-            
-            const runs = reportData[discipline] || [];
-            if (runs.length === 0) {
-                showStatus('No data to export for ' + discipline, 'error');
-                return;
-            }
-
-            // Create CSV content
-            const headers = ['C-WAGS #', 'Call Name', 'Handler', 'Date', 'Class', 'Round', 'Result', 'Judge', 'Comments'];
-            const csvContent = [
-                headers.join(','),
-                ...runs.map(run => [
-                    `"${run.cwagsNumber}"`,
-                    `"${run.dogName}"`,
-                    `"${run.handlerName}"`,
-                    `"${run.date}"`,
-                    `"${run.className}"`,
-                    `"${run.roundNumber}"`,
-                    `"${run.result}"`,
-                    `"${run.judgeName}"`,
-                    `"${run.comments.replace(/"/g, '""')}"`
-                ].join(','))
-            ].join('\n');
-
-            // Create and download file
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            
-            const trialName = currentTrial?.clubName || 'Trial';
-            const dayDate = currentTrial?.days[currentDay]?.date || 'Day';
-            const filename = `${trialName}_${discipline}_${dayDate}.csv`.replace(/[^a-zA-Z0-9_-]/g, '_');
-            
-            if (navigator.msSaveBlob) {
-                navigator.msSaveBlob(blob, filename);
-            } else {
-                link.href = URL.createObjectURL(blob);
-                link.download = filename;
-                link.style.display = 'none';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            }
-            
-            showStatus(`CSV exported: ${filename}`, 'success');
-        }
-
-        function exportDisciplinePDF(discipline) {
-            console.log('📑 Exporting PDF for', discipline);
-            
-            const runs = reportData[discipline] || [];
-            if (runs.length === 0) {
-                showStatus('No data to export for ' + discipline, 'error');
-                return;
-            }
-
-            // Create a new window for printing
-            const printWindow = window.open('', '_blank');
-            
-            const trialName = currentTrial?.clubName || 'Trial';
-            const dayDate = currentTrial?.days[currentDay]?.date || 'Date TBD';
-            const formattedDate = dayDate ? new Date(dayDate + 'T12:00:00').toLocaleDateString() : 'Date TBD';
-            
-            // Generate statistics
-            const totalRuns = runs.length;
-            const passes = runs.filter(r => r.result === 'Pass' || r.result === 'P').length;
-            const fails = runs.filter(r => r.result === 'Fail' || r.result === 'F').length;
-            const passRate = totalRuns > 0 ? ((passes / totalRuns) * 100).toFixed(1) : '0';
-
-            const html = `
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <title>${trialName} - ${discipline.charAt(0).toUpperCase() + discipline.slice(1)} Report</title>
-                    <style>
-                        body { font-family: Arial, sans-serif; margin: 20px; }
-                        .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px; }
-                        .title { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
-                        .subtitle { font-size: 16px; color: #666; }
-                        .stats { display: flex; justify-content: space-around; margin: 20px 0; padding: 15px; background: #f5f5f5; }
-                        .stat { text-align: center; }
-                        .stat-value { font-size: 20px; font-weight: bold; color: #333; }
-                        .stat-label { font-size: 12px; color: #666; }
-                        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-                        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-                        th { background-color: #f2f2f2; font-weight: bold; }
-                        .result-pass { color: #28a745; font-weight: bold; }
-                        .result-fail { color: #dc3545; font-weight: bold; }
-                        .result-center { text-align: center; }
-                        @media print { 
-                            body { margin: 0; }
-                            .no-print { display: none; }
-                        }
-                    </style>
-                </head>
-                <body>
-                    <div class="header">
-                        <div class="title">${trialName}</div>
-                        <div class="subtitle">${discipline.charAt(0).toUpperCase() + discipline.slice(1)} Disciplines Report - ${formattedDate}</div>
-                    </div>
-                    
-                    <div class="stats">
-                        <div class="stat">
-                            <div class="stat-value">${totalRuns}</div>
-                            <div class="stat-label">Total Entries</div>
-                        </div>
-                        <div class="stat">
-                            <div class="stat-value">${passes}</div>
-                            <div class="stat-label">Passes</div>
-                        </div>
-                        <div class="stat">
-                            <div class="stat-value">${fails}</div>
-                            <div class="stat-label">Fails</div>
-                        </div>
-                        <div class="stat">
-                            <div class="stat-value">${passRate}%</div>
-                            <div class="stat-label">Pass Rate</div>
-                        </div>
-                    </div>
-                    
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>C-WAGS #</th>
-                                <th>Call Name</th>
-                                <th>Handler</th>
-                                <th>Date</th>
-                                <th>Class</th>
-                                <th>Round</th>
-                                <th>Result</th>
-                                <th>Judge</th>
-                                <th>Comments</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${runs.map(run => `
-                                <tr>
-                                    <td style="font-weight: bold;">${run.cwagsNumber}</td>
-                                    <td>${run.dogName}</td>
-                                    <td>${run.handlerName}</td>
-                                    <td>${run.date}</td>
-                                    <td>${run.className}</td>
-                                    <td class="result-center">${run.roundNumber}</td>
-                                    <td class="result-center ${run.result === 'Pass' ? 'result-pass' : 'result-fail'}">${run.result}</td>
-                                    <td>${run.judgeName}</td>
-                                    <td>${run.comments}</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                    
-                    <div class="no-print" style="margin-top: 30px; text-align: center;">
-                        <button onclick="window.print()" style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">Print/Save as PDF</button>
-                        <button onclick="window.close()" style="padding: 10px 20px; background: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer; margin-left: 10px;">Close</button>
-                    </div>
-                </body>
-                </html>
-            `;
-            
-            printWindow.document.write(html);
-            printWindow.document.close();
-            
-            showStatus('PDF preview opened - use Print/Save as PDF', 'success');
-        }
-
-        function exportDisciplineExcel(discipline) {
-            console.log('📊 Attempting Excel export for', discipline);
-            
-            const runs = reportData[discipline] || [];
-            if (runs.length === 0) {
-                showStatus('No data to export for ' + discipline, 'error');
-                return;
-            }
-
-            // Check if XLSX library is available
-            if (typeof XLSX === 'undefined') {
-                console.error('XLSX library not loaded');
-                showStatus('Excel library not available. Using CSV export instead.', 'error');
-                exportDisciplineCSV(discipline);
-                return;
-            }
-
-            try {
-                console.log('📊 XLSX library found, creating workbook...');
-                
-                const trialName = currentTrial?.clubName || 'Trial';
-                const dayDate = currentTrial?.days[currentDay]?.date || 'Date TBD';
-                const formattedDate = dayDate ? new Date(dayDate + 'T12:00:00').toLocaleDateString() : 'Date TBD';
-                
-                // Generate statistics
-                const totalRuns = runs.length;
-                const passes = runs.filter(r => r.result === 'Pass' || r.result === 'P').length;
-                const fails = runs.filter(r => r.result === 'Fail' || r.result === 'F').length;
-                const passRate = totalRuns > 0 ? ((passes / totalRuns) * 100).toFixed(1) : '0';
-
-                // Prepare data for Excel
-                const excelData = [];
-                
-                // Add title and summary
-                excelData.push([`${trialName} - ${discipline.charAt(0).toUpperCase() + discipline.slice(1)} Report`]);
-                excelData.push([`Date: ${formattedDate}`]);
-                excelData.push([`Total Entries: ${totalRuns}`]);
-                excelData.push([`Passes: ${passes} | Fails: ${fails} | Pass Rate: ${passRate}%`]);
-                excelData.push([]); // Empty row
-                
-                // Add table headers
-                excelData.push(['C-WAGS #', 'Call Name', 'Handler', 'Date', 'Class', 'Round', 'Result', 'Judge', 'Comments']);
-                
-                // Add data rows
-                runs.forEach(run => {
-                    excelData.push([
-                        run.cwagsNumber,
-                        run.dogName,
-                        run.handlerName,
-                        run.date,
-                        run.className,
-                        run.roundNumber,
-                        run.result,
-                        run.judgeName,
-                        run.comments
-                    ]);
-                });
-
-                console.log('📊 Creating worksheet with', excelData.length, 'rows...');
-                
-                // Create workbook and worksheet
-                const wb = XLSX.utils.book_new();
-                const ws = XLSX.utils.aoa_to_sheet(excelData);
-                
-                // Set column widths
-                ws['!cols'] = [
-                    {wch: 12}, // C-WAGS #
-                    {wch: 15}, // Call Name
-                    {wch: 20}, // Handler
-                    {wch: 12}, // Date
-                    {wch: 25}, // Class
-                    {wch: 8},  // Round
-                    {wch: 10}, // Result
-                    {wch: 15}, // Judge
-                    {wch: 30}  // Comments
-                ];
-
-                // Add worksheet to workbook
-                const sheetName = discipline.charAt(0).toUpperCase() + discipline.slice(1);
-                XLSX.utils.book_append_sheet(wb, ws, sheetName);
-                
-                console.log('📊 Workbook created, attempting to save...');
-
-                // Generate filename and save
-                const filename = `${trialName}_${discipline}_${formattedDate}`.replace(/[^a-zA-Z0-9_-]/g, '_') + '.xlsx';
-                
-                // Try to write the file
-                XLSX.writeFile(wb, filename);
-                
-                console.log('✅ Excel file created successfully:', filename);
-                showStatus(`Excel file exported: ${filename}`, 'success');
-                
-            } catch (error) {
-                console.error('❌ Error creating Excel file:', error);
-                console.error('Error details:', error.message);
-                console.error('Error stack:', error.stack);
-                
-                showStatus('Excel export failed. Using CSV export instead.', 'error');
-                
-                // Fallback to CSV
-                setTimeout(() => {
-                    exportDisciplineCSV(discipline);
-                }, 1000);
-            }
-        }
-
-        // Test XLSX library on page load
-        function testExcelLibrary() {
-            if (typeof XLSX !== 'undefined') {
-                console.log('✅ XLSX library loaded successfully');
-                console.log('📊 XLSX version:', XLSX.version);
-            } else {
-                console.error('❌ XLSX library failed to load');
-                console.log('🔧 Available libraries:', Object.keys(window).filter(key => key.includes('XLS')));
-                
-                // Disable Excel buttons if library didn't load
-                setTimeout(() => {
-                    const excelButtons = document.querySelectorAll('.btn-excel');
-                    excelButtons.forEach(btn => {
-                        btn.disabled = true;
-                        btn.textContent = btn.textContent.replace('📊', '❌');
-                        btn.title = 'Excel library failed to load';
-                    });
-                }, 500);
-            }
-        }
-
-        // Start the application when page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('📋 DOM loaded, starting FIXED app...');
-            
-            // Test Excel library
-            setTimeout(() => {
-                testExcelLibrary();
-            }, 1000);
-            
-            init().catch(error => {
-                console.error('❌ Failed to initialize app:', error);
-                showStatus('Failed to initialize application', 'error');
-            });
-        });
-
-        console.log('📋 FIXED script setup complete, waiting for DOM...');
-    </script>
+   <script>
+console.log('🎯 Enhanced Single-Day Trial Report (FIXED VERSION) starting...');
+
+// Firebase Configuration
+const firebaseConfig = {
+   apiKey: "AIzaSyBWpyM_lEpqdQWuKuLLZiW1SlloWsWkJCs",
+   authDomain: "dog-trialing-system.firebaseapp.com",
+   projectId: "dog-trialing-system",
+   storageBucket: "dog-trialing-system.firebasestorage.app",
+   messagingSenderId: "490812593982",
+   appId: "1:490812593982:web:344776707566f8d9027e6f",
+   measurementId: "G-EMLX58Y278"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// ===== GLOBAL VARIABLES =====
+let currentUser = null;
+let currentTrial = null;
+let reportData = null;
+let entriesData = {};
+
+// C-WAGS class order mapping
+const CWAGS_CLASS_ORDER = {
+   'PATROL 1': 1, 'PATROL1': 1, 'P1': 1, 'SCENT PATROL': 1, 'PATROL': 1,
+   'DETECTIVE 2': 2, 'DETECTIVE2': 2, 'DET2': 2, 'D2': 2, 'DETECTIVE': 2,
+   'INVESTIGATOR 3': 3, 'INVESTIGATOR3': 3, 'INV3': 3, 'I3': 3, 'INVESTIGATOR': 3,
+   'SUPER SLEUTH 4': 4, 'SUPER SLEUTH4': 4, 'SUPERSLEUTH4': 4, 'SS4': 4, 'S4': 4, 'SUPER SLEUTH': 4,
+   'PRIVATE INV': 5, 'PRIVATE INVESTIGATOR': 5, 'PRIVATEINV': 5, 'PRIV INV': 5, 'PI': 5, 'PRIVATE': 5,
+   'DET DIVERSIONS': 6, 'DETECTIVE DIVERSIONS': 6, 'DETDIVERSIONS': 6, 'DD': 6, 'DIVERSIONS': 6,
+   'RANGER 1': 7, 'RANGER1': 7, 'R1': 7,
+   'RANGER 2': 8, 'RANGER2': 8, 'R2': 8,
+   'RANGER 3': 9, 'RANGER3': 9, 'R3': 9,
+   'RANGER 4': 10, 'RANGER4': 10, 'R4': 10,
+   'RANGER 5': 11, 'RANGER5': 11, 'R5': 11,
+   'DASHER 3': 12, 'DASHER3': 12, 'DASH3': 12, 'DA3': 12,
+   'DASHER 4': 13, 'DASHER4': 13, 'DASH4': 13, 'DA4': 13,
+   'DASHER 5': 14, 'DASHER5': 14, 'DASH5': 14, 'DA5': 14,
+   'DASHER 6': 15, 'DASHER6': 15, 'DASH6': 15, 'DA6': 15
+};
+
+// ===== UTILITY FUNCTIONS =====
+function getCWAGSClassOrder(className) {
+   if (!className) return 999;
+   
+   const cleanClassName = className.toUpperCase()
+       .replace(/[^A-Z0-9\s]/g, '')
+       .replace(/\s+/g, ' ')
+       .trim();
+   
+   if (CWAGS_CLASS_ORDER[cleanClassName]) {
+       return CWAGS_CLASS_ORDER[cleanClassName];
+   }
+   
+   const noSpaceClassName = cleanClassName.replace(/\s/g, '');
+   if (CWAGS_CLASS_ORDER[noSpaceClassName]) {
+       return CWAGS_CLASS_ORDER[noSpaceClassName];
+   }
+   
+   for (const code in CWAGS_CLASS_ORDER) {
+       if (cleanClassName.includes(code) || code.includes(cleanClassName)) {
+           return CWAGS_CLASS_ORDER[code];
+       }
+   }
+   
+   return 999;
+}
+
+function showStatus(message, type) {
+   console.log('Status (' + type + '): ' + message);
+   const statusDiv = document.getElementById('statusMessage');
+   statusDiv.textContent = message;
+   statusDiv.className = 'status-message status-' + type;
+   statusDiv.style.display = 'block';
+   
+   setTimeout(function() {
+       statusDiv.style.display = 'none';
+   }, 5000);
+}
+
+function showDebug(message) {
+   console.log('Debug:', message);
+   const debugDiv = document.getElementById('debugInfo');
+   const debugContent = document.getElementById('debugContent');
+   debugContent.innerHTML = message;
+   debugDiv.style.display = 'block';
+}
+
+function getDateFromFirebase(dateValue) {
+   if (!dateValue) return null;
+   if (dateValue.toDate) {
+       return dateValue.toDate().toISOString().split('T')[0];
+   }
+   if (typeof dateValue === 'string') {
+       return dateValue;
+   }
+   return null;
+}
+
+function createLocalDate(dateStr) {
+   if (!dateStr) return null;
+   if (typeof dateStr === 'string') {
+       const dateWithTime = dateStr.includes('T') ? dateStr : dateStr + 'T12:00:00';
+       return new Date(dateWithTime);
+   }
+   return new Date(dateStr);
+}
+
+function isFeoEntry(entryType) {
+   if (!entryType) return false;
+   const typeStr = entryType.toString().toLowerCase().trim();
+   return typeStr === 'feo' || typeStr === 'for exhibition only' || typeStr === 'exhibition';
+}
+
+// ===== ENHANCED RESULT PROCESSING =====
+function processParticipantResult(participantResult) {
+   // Check for enhanced numerical scoring (Rally, Games, Obedience)
+   if (participantResult.numericalScore !== undefined && participantResult.passIndicator !== undefined) {
+       console.log('📊 Found numerical score:', participantResult.numericalScore, 'Pass indicator:', participantResult.passIndicator);
+       
+       if (participantResult.passIndicator && participantResult.passIndicator.trim() !== '') {
+           // Show actual pass indicator instead of just "P"
+           return { result: participantResult.passIndicator, cssClass: 'result-pass' };
+       } else if (participantResult.numericalScore !== undefined && participantResult.numericalScore !== '') {
+           return { result: 'F', cssClass: 'result-fail' };
+       }
+   }
+   
+   // Check for traditional scent work scoring
+   if (participantResult.passFail) {
+       if (participantResult.passFail === 'Pass') {
+           return { result: 'P', cssClass: 'result-pass' };
+       } else if (participantResult.passFail === 'Fail') {
+           return { result: 'F', cssClass: 'result-fail' };
+       }
+   }
+   
+   return { result: '-', cssClass: 'result-absent' };
+}
+
+// ===== FEO + ORPHANED SCORE DETECTION =====
+function shouldExcludeParticipantEnhanced(participant, participantId) {
+   // First check for orphaned scores (deleted entries)
+   const docIdParts = participantId.split('_');
+   const docId = docIdParts[0];
+   const originalEntry = entriesData[docId];
+   
+   if (!originalEntry) {
+       console.log('🚫 ORPHANED SCORE detected (entry deleted): ' + participantId);
+       return true; // Skip orphaned scores from deleted entries
+   }
+
+   // Check multiple possible FEO indicators
+   if (participant.entryType && isFeoEntry(participant.entryType)) {
+       console.log('🚫 FEO detected via entryType: ' + participantId + ' (' + participant.entryType + ')');
+       return true;
+   }
+
+   if (participant.type && isFeoEntry(participant.type)) {
+       console.log('🚫 FEO detected via type: ' + participantId + ' (' + participant.type + ')');
+       return true;
+   }
+
+   if (participantId && participantId.toLowerCase().includes('feo')) {
+       console.log('🚫 FEO detected in participantId: ' + participantId);
+       return true;
+   }
+
+   if (participant.comments && participant.comments.toLowerCase().includes('feo')) {
+       console.log('🚫 FEO detected in comments: ' + participantId + ' (' + participant.comments + ')');
+       return true;
+   }
+
+   // Check original entries data for FEO status
+   if (originalEntry.selectedEntries) {
+       const parts = participantId.split('_');
+       if (parts.length > 1) {
+           const entryDetails = parts[1];
+           let parsedClassName = '';
+           
+           // Parse class name from entry details
+           const classNames = [
+               'Patrol 1', 'Detective 2', 'Investigator 3', 'Super Sleuth 4',
+               'Private Inv', 'Det Diversions', 'Ranger 1', 'Ranger 2', 
+               'Ranger 3', 'Ranger 4', 'Ranger 5', 'Dasher 3', 'Dasher 4', 
+               'Dasher 5', 'Dasher 6'
+           ];
+           
+           for (let i = 0; i < classNames.length; i++) {
+               if (entryDetails.includes(classNames[i])) {
+                   parsedClassName = classNames[i];
+                   break;
+               }
+           }
+
+           if (parsedClassName) {
+               const matchingEntry = originalEntry.selectedEntries.find(function(se) {
+                   return se.className === parsedClassName;
+               });
+               if (matchingEntry && matchingEntry.type && isFeoEntry(matchingEntry.type)) {
+                   console.log('🚫 FEO detected via original entries: ' + participantId + ' (' + matchingEntry.type + ')');
+                   return true;
+               }
+           }
+       }
+   }
+
+   return false;
+}
+
+// ===== INITIALIZATION =====
+async function init() {
+   try {
+       console.log('🚀 Starting FIXED initialization...');
+       
+       await new Promise(function(resolve, reject) {
+           const unsubscribe = auth.onAuthStateChanged(async function(user) {
+               unsubscribe();
+               console.log('✅ Firebase initialized');
+               
+               if (user) {
+                   try {
+                       console.log('✅ User authenticated:', user.uid);
+                       currentUser = { uid: user.uid, email: user.email };
+                       resolve();
+                   } catch (error) {
+                       console.error('❌ Error setting up user:', error);
+                       reject(error);
+                   }
+               } else {
+                   console.log('🔄 Redirecting to login...');
+                   window.location.href = 'index.html';
+               }
+           });
+       });
+
+       console.log('📊 Loading trials...');
+       await loadTrials();
+       console.log('✅ FIXED initialization complete');
+       
+   } catch (error) {
+       console.error('❌ Error initializing:', error);
+       showStatus('Error initializing application: ' + error.message, 'error');
+   }
+}
+
+async function loadTrials() {
+   try {
+       console.log('🔍 Loading trials for user:', currentUser ? currentUser.uid : 'none');
+       showStatus('Loading your trials...', 'info');
+
+       const trialsSnapshot = await db.collection("trials")
+           .where("createdBy", "==", currentUser.uid)
+           .get();
+
+       console.log('📊 Found', trialsSnapshot.size, 'trials');
+
+       const trialSelect = document.getElementById('trialSelect');
+       trialSelect.innerHTML = '<option value="">Select a trial...</option>';
+
+       if (!trialsSnapshot.empty) {
+           const trials = [];
+           trialsSnapshot.forEach(function(doc) {
+               trials.push({ id: doc.id, ...doc.data() });
+           });
+
+           trials.sort(function(a, b) {
+               const aTime = a.createdAt ? a.createdAt.seconds : 0;
+               const bTime = b.createdAt ? b.createdAt.seconds : 0;
+               return bTime - aTime;
+           });
+
+           trials.forEach(function(trial) {
+               const option = document.createElement('option');
+               option.value = trial.id;
+               
+               let trialLabel = trial.clubName || 'Unnamed Trial';
+               
+               if (trial.days && trial.days.length > 0) {
+                   const dates = trial.days
+                       .filter(function(day) { return day.date; })
+                       .map(function(day) {
+                           const localDate = createLocalDate(day.date);
+                           return localDate.toLocaleDateString('en-US', { 
+                               month: 'short', 
+                               day: 'numeric',
+                               timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+                           });
+                       })
+                       .join(', ');
+                   if (dates) {
+                       trialLabel += ' (' + dates + ')';
+                   }
+               }
+               
+               option.textContent = trialLabel;
+               trialSelect.appendChild(option);
+           });
+
+           showStatus('Found ' + trials.length + ' trials', 'success');
+           console.log('✅ Trials loaded successfully');
+       } else {
+           showStatus('No trials found', 'error');
+           console.log('⚠️ No trials found for user');
+       }
+   } catch (error) {
+       console.error('❌ Error loading trials:', error);
+       showStatus('Error loading trials: ' + error.message, 'error');
+   }
+}
+
+async function generateReport() {
+   const trialId = document.getElementById('trialSelect').value;
+   
+   if (!trialId) {
+       showStatus('Please select a trial', 'error');
+       return;
+   }
+
+   try {
+       console.log('📊 Generating ENHANCED single-day trial report for:', trialId);
+       showStatus('Generating enhanced trial report...', 'info');
+
+       // Load trial data
+       const trialDoc = await db.collection('trials').doc(trialId).get();
+       if (!trialDoc.exists) {
+           throw new Error('Trial not found');
+       }
+
+       currentTrial = { id: trialDoc.id, ...trialDoc.data() };
+       console.log('📋 Trial loaded:', currentTrial.clubName);
+
+       // Load entries data for enhanced filtering
+       console.log('📂 Loading entries data for enhanced filtering...');
+       const entriesSnapshot = await db.collection('entries')
+           .where('trialId', '==', trialId)
+           .get();
+
+       entriesData = {};
+       entriesSnapshot.forEach(function(doc) {
+           entriesData[doc.id] = doc.data();
+       });
+       console.log('📊 Loaded ' + Object.keys(entriesData).length + ' entry documents for filtering');
+
+       // Look for scores
+       console.log('🔍 Looking for scores...');
+       const scoresSnapshot = await db.collection('scores').get();
+
+       let allRunsData = [];
+       let debugInfo = {
+           totalEntriesProcessed: 0,
+           regularIncluded: 0,
+           feoFiltered: 0,
+           orphanedFiltered: 0
+       };
+
+       scoresSnapshot.forEach(function(doc) {
+           const scoreData = doc.data();
+           const docId = doc.id;
+           
+           // Check if this score document belongs to our trial
+           if (docId.startsWith(trialId) && scoreData.participants) {
+               Object.entries(scoreData.participants).forEach(function(entry) {
+                   const participantId = entry[0];
+                   const result = entry[1];
+                   
+                   debugInfo.totalEntriesProcessed++;
+                   
+                   // ENHANCED FEO AND ORPHANED FILTERING
+                   if (shouldExcludeParticipantEnhanced(result, participantId)) {
+                       const docIdPart = participantId.split('_')[0];
+                       if (!entriesData[docIdPart]) {
+                           debugInfo.orphanedFiltered++;
+                       } else {
+                           debugInfo.feoFiltered++;
+                       }
+                       return; // Skip this entry
+                   }
+
+                   debugInfo.regularIncluded++;
+                   
+                   // USE ENHANCED RESULT PROCESSING
+                   const processedResult = processParticipantResult(result);
+                   if (processedResult.result && processedResult.result !== '-') {
+                       allRunsData.push({
+                           participantId: participantId,
+                           handlerName: result.handlerName || 'Unknown Handler',
+                           dogName: result.dogCallName || result.dogName || 'Unknown',
+                           className: scoreData.roundInfo ? scoreData.roundInfo.className : 'Unknown Class',
+                           roundNumber: scoreData.roundInfo ? scoreData.roundInfo.roundNumber : 1,
+                           judgeName: scoreData.roundInfo ? scoreData.roundInfo.judgeName : scoreData.judgeName || 'Unknown Judge',
+                           result: processedResult.result,
+                           resultClass: processedResult.cssClass,
+                           time: result.time || '',
+                           scents: [result.scent1, result.scent2, result.scent3, result.scent4],
+                           faults: [result.fault1, result.fault2].filter(f => f && f.trim()),
+                           numericalScore: result.numericalScore,
+                           passIndicator: result.passIndicator
+                       });
+                   }
+               });
+           }
+       });
+
+       console.log('📊 Total runs found:', allRunsData.length);
+       console.log('🔧 Enhanced Filtering Results:', debugInfo);
+
+       showDebug(`
+                   <strong>Enhanced Filtering Results:</strong><br>
+                   Total entries processed: ${debugInfo.totalEntriesProcessed}<br>
+                   Regular entries included: ${debugInfo.regularIncluded}<br>
+                   FEO entries filtered out: ${debugInfo.feoFiltered}<br>
+                   Orphaned scores filtered out: ${debugInfo.orphanedFiltered}<br>
+                   Final report entries: ${allRunsData.length}
+               `);
+
+       if (allRunsData.length === 0) {
+           showStatus('No scored runs found for this trial', 'error');
+           document.getElementById('reportContainer').style.display = 'none';
+           document.getElementById('noDataMessage').style.display = 'block';
+           return;
+       }
+
+       // Sort runs by class order and handler name
+       allRunsData.sort(function(a, b) {
+           const classOrderA = getCWAGSClassOrder(a.className);
+           const classOrderB = getCWAGSClassOrder(b.className);
+           
+           if (classOrderA !== classOrderB) {
+               return classOrderA - classOrderB;
+           }
+           
+           return (a.handlerName || '').localeCompare(b.handlerName || '');
+       });
+
+       reportData = {
+           trialName: currentTrial.clubName || 'Trial',
+           trialDate: currentTrial.days && currentTrial.days[0] && currentTrial.days[0].date ? 
+                     getDateFromFirebase(currentTrial.days[0].date) : 'Date TBD',
+           runs: allRunsData,
+           stats: calculateEnhancedStats(allRunsData),
+           debugInfo: debugInfo
+       };
+
+       renderReport();
+       showStatus('Enhanced trial report generated successfully!', 'success');
+
+   } catch (error) {
+       console.error('❌ Error generating report:', error);
+       showStatus('Error generating report: ' + error.message, 'error');
+   }
+}
+
+function calculateEnhancedStats(runs) {
+   const stats = {
+       totalRuns: runs.length,
+       totalPasses: 0,
+       totalFails: 0,
+       byClass: {}
+   };
+
+   runs.forEach(function(run) {
+       // Count passes/fails using enhanced logic
+       if (run.result === 'F') {
+           stats.totalFails++;
+       } else if (run.result && run.result !== '-') {
+           stats.totalPasses++;
+       }
+
+       // Group by class
+       if (!stats.byClass[run.className]) {
+           stats.byClass[run.className] = {
+               total: 0,
+               passes: 0,
+               fails: 0
+           };
+       }
+
+       stats.byClass[run.className].total++;
+       if (run.result === 'F') {
+           stats.byClass[run.className].fails++;
+       } else if (run.result && run.result !== '-') {
+           stats.byClass[run.className].passes++;
+       }
+   });
+
+   stats.passRate = stats.totalRuns > 0 ? ((stats.totalPasses / stats.totalRuns) * 100).toFixed(1) : '0';
+
+   return stats;
+}
+
+function renderReport() {
+   if (!reportData) return;
+
+   document.getElementById('reportTitle').textContent = 'Single-Day Trial Report: ' + reportData.trialName;
+   document.getElementById('reportDate').textContent = 'Trial Date: ' + (reportData.trialDate || 'Date TBD');
+
+   // Render summary stats
+   const statsContainer = document.getElementById('summaryStats');
+   statsContainer.innerHTML = '';
+
+   const overallStats = [
+       { label: 'Total Runs', value: reportData.stats.totalRuns },
+       { label: 'Total Passes', value: reportData.stats.totalPasses },
+       { label: 'Total Fails', value: reportData.stats.totalFails },
+       { label: 'Pass Rate', value: reportData.stats.passRate + '%' }
+   ];
+
+   overallStats.forEach(function(stat) {
+       const statCard = document.createElement('div');
+       statCard.className = 'stat-card';
+       statCard.innerHTML = '<div class="stat-value">' + stat.value + '</div>' +
+                           '<div class="stat-label">' + stat.label + '</div>';
+       statsContainer.appendChild(statCard);
+   });
+
+   // Render class breakdown
+   const classContainer = document.getElementById('classBreakdown');
+   classContainer.innerHTML = '';
+
+   // Sort classes by C-WAGS order
+   const sortedClasses = Object.keys(reportData.stats.byClass).sort(function(a, b) {
+       return getCWAGSClassOrder(a) - getCWAGSClassOrder(b);
+   });
+
+   sortedClasses.forEach(function(className) {
+       const classStats = reportData.stats.byClass[className];
+       const passRate = classStats.total > 0 ? ((classStats.passes / classStats.total) * 100).toFixed(1) : '0';
+       
+       const classCard = document.createElement('div');
+       classCard.className = 'class-summary-card';
+       classCard.innerHTML = '<h4>' + className + '</h4>' +
+                            '<p>Total Runs: ' + classStats.total + '</p>' +
+                            '<p>Passes: ' + classStats.passes + '</p>' +
+                            '<p>Fails: ' + classStats.fails + '</p>' +
+                            '<p>Pass Rate: ' + passRate + '%</p>';
+       classContainer.appendChild(classCard);
+   });
+
+   // Render detailed results table
+   const tbody = document.getElementById('resultsTableBody');
+   tbody.innerHTML = '';
+
+   reportData.runs.forEach(function(run) {
+       const row = document.createElement('tr');
+       
+       // Enhanced result display
+       let resultDisplay = run.result;
+       if (run.numericalScore && run.passIndicator) {
+           resultDisplay = run.passIndicator + ' (' + run.numericalScore + ')';
+       }
+       
+       row.innerHTML = '<td>' + (run.handlerName || 'Unknown') + '</td>' +
+                      '<td>' + (run.dogName || 'Unknown') + '</td>' +
+                      '<td>' + (run.className || 'Unknown') + '</td>' +
+                      '<td>Round ' + (run.roundNumber || 1) + '</td>' +
+                      '<td>' + (run.judgeName || 'Unknown') + '</td>' +
+                      '<td class="' + (run.resultClass || 'result-absent') + '">' + resultDisplay + '</td>' +
+                      '<td>' + (run.time || '-') + '</td>' +
+                      '<td>' + (run.faults.length > 0 ? run.faults.join('; ') : '-') + '</td>';
+       
+       tbody.appendChild(row);
+   });
+
+   document.getElementById('reportContainer').style.display = 'block';
+   document.getElementById('noDataMessage').style.display = 'none';
+}
+
+// ===== EXPORT FUNCTIONS =====
+async function exportReportCSV() {
+   if (!reportData) {
+       showStatus('No report data to export', 'error');
+       return;
+   }
+
+   try {
+       let csvContent = '';
+       csvContent += '"Single-Day Trial Report"\n';
+       csvContent += '"Trial","' + reportData.trialName + '"\n';
+       csvContent += '"Date","' + reportData.trialDate + '"\n';
+       csvContent += '"Generated","' + new Date().toLocaleDateString() + '"\n';
+       csvContent += '\n';
+
+       csvContent += '"Summary Statistics"\n';
+       csvContent += '"Total Runs","' + reportData.stats.totalRuns + '"\n';
+       csvContent += '"Total Passes","' + reportData.stats.totalPasses + '"\n';
+       csvContent += '"Total Fails","' + reportData.stats.totalFails + '"\n';
+       csvContent += '"Pass Rate","' + reportData.stats.passRate + '%"\n';
+       csvContent += '\n';
+
+       csvContent += '"Handler Name","Dog Name","Class","Round","Judge","Result","Time","Faults"\n';
+       
+       reportData.runs.forEach(function(run) {
+           let resultDisplay = run.result;
+           if (run.numericalScore && run.passIndicator) {
+               resultDisplay = run.passIndicator + ' (' + run.numericalScore + ')';
+           }
+           
+           csvContent += '"' + (run.handlerName || 'Unknown') + '","' +
+                        (run.dogName || 'Unknown') + '","' +
+                        (run.className || 'Unknown') + '","' +
+                        'Round ' + (run.roundNumber || 1) + '","' +
+                        (run.judgeName || 'Unknown') + '","' +
+                        resultDisplay + '","' +
+                        (run.time || '-') + '","' +
+                        (run.faults.length > 0 ? run.faults.join('; ') : '-') + '"\n';
+       });
+
+       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+       const url = URL.createObjectURL(blob);
+       const link = document.createElement('a');
+       link.href = url;
+       link.download = reportData.trialName.replace(/[^a-zA-Z0-9]/g, '_') + '_SingleDay_Report.csv';
+       document.body.appendChild(link);
+       link.click();
+       document.body.removeChild(link);
+       URL.revokeObjectURL(url);
+
+       showStatus('Report CSV exported successfully!', 'success');
+   } catch (error) {
+       console.error('Error exporting CSV:', error);
+       showStatus('Error exporting CSV: ' + error.message, 'error');
+   }
+}
+
+async function exportReportExcel() {
+   if (!reportData) {
+       showStatus('No report data to export', 'error');
+       return;
+   }
+
+   try {
+       showStatus('Generating Excel export...', 'info');
+
+       const workbook = XLSX.utils.book_new();
+       
+       // Summary sheet
+       const summaryData = [
+           ['Single-Day Trial Report'],
+           ['Trial', reportData.trialName],
+           ['Date', reportData.trialDate],
+           ['Generated', new Date().toLocaleDateString()],
+           [],
+           ['Summary Statistics'],
+           ['Total Runs', reportData.stats.totalRuns],
+           ['Total Passes', reportData.stats.totalPasses],
+           ['Total Fails', reportData.stats.totalFails],
+           ['Pass Rate', reportData.stats.passRate + '%'],
+           [],
+           ['Class Breakdown']
+       ];
+
+       // Add class breakdown
+       const sortedClasses = Object.keys(reportData.stats.byClass).sort(function(a, b) {
+           return getCWAGSClassOrder(a) - getCWAGSClassOrder(b);
+       });
+
+       sortedClasses.forEach(function(className) {
+           const classStats = reportData.stats.byClass[className];
+           const passRate = classStats.total > 0 ? ((classStats.passes / classStats.total) * 100).toFixed(1) : '0';
+           summaryData.push([className, classStats.total + ' runs', classStats.passes + ' passes', classStats.fails + ' fails', passRate + '% pass rate']);
+       });
+
+       const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
+       XLSX.utils.book_append_sheet(workbook, summarySheet, 'Summary');
+
+       // Detailed results sheet
+       const detailsData = [
+           ['Detailed Results'],
+           [],
+           ['Handler Name', 'Dog Name', 'Class', 'Round', 'Judge', 'Result', 'Time', 'Faults']
+       ];
+
+       reportData.runs.forEach(function(run) {
+           let resultDisplay = run.result;
+           if (run.numericalScore && run.passIndicator) {
+               resultDisplay = run.passIndicator + ' (' + run.numericalScore + ')';
+           }
+           
+           detailsData.push([
+               run.handlerName || 'Unknown',
+               run.dogName || 'Unknown',
+               run.className || 'Unknown',
+               'Round ' + (run.roundNumber || 1),
+               run.judgeName || 'Unknown',
+               resultDisplay,
+               run.time || '-',
+               run.faults.length > 0 ? run.faults.join('; ') : '-'
+           ]);
+       });
+
+       const detailsSheet = XLSX.utils.aoa_to_sheet(detailsData);
+       XLSX.utils.book_append_sheet(workbook, detailsSheet, 'Detailed Results');
+
+       const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+       const blob = new Blob([excelBuffer], { 
+           type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+       });
+       
+       const url = URL.createObjectURL(blob);
+       const link = document.createElement('a');
+       link.href = url;
+       link.download = reportData.trialName.replace(/[^a-zA-Z0-9]/g, '_') + '_SingleDay_Report.xlsx';
+       document.body.appendChild(link);
+       link.click();
+       document.body.removeChild(link);
+       URL.revokeObjectURL(url);
+
+       showStatus('Excel report exported successfully!', 'success');
+       
+   } catch (error) {
+      console.error('Error exporting Excel:', error);
+       showStatus('Error exporting Excel: ' + error.message, 'error');
+   }
+}
+
+async function exportReportPDF() {
+   if (!reportData) {
+       showStatus('No report data to export', 'error');
+       return;
+   }
+
+   try {
+       showStatus('Opening PDF preview...', 'info');
+       
+       const printWindow = window.open('', '_blank');
+       
+       let htmlContent = `
+           <!DOCTYPE html>
+           <html>
+           <head>
+               <title>Single-Day Trial Report</title>
+               <style>
+                   body { font-family: Arial, sans-serif; margin: 20px; }
+                   .header { text-align: center; margin-bottom: 30px; }
+                   .title { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
+                   .info { font-size: 16px; color: #666; margin-bottom: 20px; }
+                   .summary { margin-bottom: 30px; }
+                   .summary h2 { font-size: 18px; margin-bottom: 15px; }
+                   .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px; }
+                   .stat-item { text-align: center; padding: 10px; border: 1px solid #ddd; }
+                   .stat-value { font-size: 18px; font-weight: bold; }
+                   .stat-label { font-size: 12px; color: #666; }
+                   .class-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+                   .class-item { padding: 10px; border: 1px solid #ddd; font-size: 12px; }
+                   table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+                   th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 11px; }
+                   th { background-color: #f2f2f2; font-weight: bold; }
+                   .result-pass { background-color: #d4edda; color: #155724; }
+                   .result-fail { background-color: #f8d7da; color: #721c24; }
+                   @media print { .no-print { display: none; } }
+               </style>
+           </head>
+           <body>
+               <div class="header">
+                   <div class="title">Single-Day Trial Report</div>
+                   <div class="info">Trial: ${reportData.trialName}</div>
+                   <div class="info">Date: ${reportData.trialDate}</div>
+                   <div class="info">Generated: ${new Date().toLocaleDateString()}</div>
+               </div>
+
+               <div class="summary">
+                   <h2>Summary Statistics</h2>
+                   <div class="stats-grid">
+                       <div class="stat-item">
+                           <div class="stat-value">${reportData.stats.totalRuns}</div>
+                           <div class="stat-label">Total Runs</div>
+                       </div>
+                       <div class="stat-item">
+                           <div class="stat-value">${reportData.stats.totalPasses}</div>
+                           <div class="stat-label">Total Passes</div>
+                       </div>
+                       <div class="stat-item">
+                           <div class="stat-value">${reportData.stats.totalFails}</div>
+                           <div class="stat-label">Total Fails</div>
+                       </div>
+                       <div class="stat-item">
+                           <div class="stat-value">${reportData.stats.passRate}%</div>
+                           <div class="stat-label">Pass Rate</div>
+                       </div>
+                   </div>
+
+                   <h2>Class Breakdown</h2>
+                   <div class="class-grid">`;
+
+       // Add class breakdown
+       const sortedClasses = Object.keys(reportData.stats.byClass).sort(function(a, b) {
+           return getCWAGSClassOrder(a) - getCWAGSClassOrder(b);
+       });
+
+       sortedClasses.forEach(function(className) {
+           const classStats = reportData.stats.byClass[className];
+           const passRate = classStats.total > 0 ? ((classStats.passes / classStats.total) * 100).toFixed(1) : '0';
+           
+           htmlContent += `
+                       <div class="class-item">
+                           <strong>${className}</strong><br>
+                           Runs: ${classStats.total}<br>
+                           Passes: ${classStats.passes}<br>
+                           Fails: ${classStats.fails}<br>
+                           Rate: ${passRate}%
+                       </div>`;
+       });
+
+       htmlContent += `
+                   </div>
+               </div>
+
+               <h2>Detailed Results</h2>
+               <table>
+                   <thead>
+                       <tr>
+                           <th>Handler</th>
+                           <th>Dog</th>
+                           <th>Class</th>
+                           <th>Round</th>
+                           <th>Judge</th>
+                           <th>Result</th>
+                           <th>Time</th>
+                           <th>Faults</th>
+                       </tr>
+                   </thead>
+                   <tbody>`;
+
+       reportData.runs.forEach(function(run) {
+           let resultDisplay = run.result;
+           if (run.numericalScore && run.passIndicator) {
+               resultDisplay = run.passIndicator + ' (' + run.numericalScore + ')';
+           }
+           
+           htmlContent += `
+                       <tr>
+                           <td>${run.handlerName || 'Unknown'}</td>
+                           <td>${run.dogName || 'Unknown'}</td>
+                           <td>${run.className || 'Unknown'}</td>
+                           <td>Round ${run.roundNumber || 1}</td>
+                           <td>${run.judgeName || 'Unknown'}</td>
+                           <td class="${run.resultClass || 'result-absent'}">${resultDisplay}</td>
+                           <td>${run.time || '-'}</td>
+                           <td>${run.faults.length > 0 ? run.faults.join('; ') : '-'}</td>
+                       </tr>`;
+       });
+
+       htmlContent += `
+                   </tbody>
+               </table>
+               
+               <div style="margin-top: 30px; font-size: 12px; color: #666;">
+                   <p><strong>Note:</strong> This report excludes FEO (For Exhibition Only) entries and orphaned scores from deleted entries.</p>
+                   <p><strong>Enhanced Filtering Applied:</strong> Regular entries: ${reportData.debugInfo.regularIncluded}, FEO filtered: ${reportData.debugInfo.feoFiltered}, Orphaned filtered: ${reportData.debugInfo.orphanedFiltered}</p>
+               </div>
+           </body>
+           </html>
+       `;
+
+       printWindow.document.write(htmlContent);
+       printWindow.document.close();
+
+       printWindow.onload = function() {
+           printWindow.print();
+       };
+
+       showStatus('PDF preview opened in new window', 'success');
+       
+   } catch (error) {
+       console.error('Error exporting PDF:', error);
+       showStatus('Error exporting PDF: ' + error.message, 'error');
+   }
+}
+
+// ===== EVENT LISTENERS =====
+document.addEventListener('DOMContentLoaded', function() {
+   console.log('📋 DOM loaded, starting FIXED app...');
+   
+   // Add event listeners
+   document.getElementById('trialSelect').addEventListener('change', generateReport);
+   document.getElementById('generateBtn').addEventListener('click', generateReport);
+   document.getElementById('exportCSVBtn').addEventListener('click', exportReportCSV);
+   document.getElementById('exportExcelBtn').addEventListener('click', exportReportExcel);
+   document.getElementById('exportPDFBtn').addEventListener('click', exportReportPDF);
+   
+   // Check if XLSX is loaded
+   if (typeof XLSX !== 'undefined') {
+       console.log('✅ XLSX library loaded successfully');
+       console.log('📊 XLSX version:', XLSX.version);
+   } else {
+       console.warn('⚠️ XLSX library not loaded');
+   }
+   
+   // Initialize the app
+   init();
+});
+
+console.log('📋 FIXED script setup complete, waiting for DOM...');
+console.log('✅ Enhanced Single-Day Trial Report with unified scoring support loaded successfully');
+</script>
 </body>
 </html>
