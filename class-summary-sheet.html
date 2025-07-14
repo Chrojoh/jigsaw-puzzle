@@ -998,18 +998,28 @@
                 console.log('⚠️ No scores found for ' + className + ', checking running orders...');
                 
                 try {
-                    const orderDoc = await db.collection('running_orders').doc(trialId).get();
-                    if (orderDoc.exists) {
-                        const runningOrderData = orderDoc.data();
-                        
-                        let finalizedData = null;
-                        if (runningOrderData.finalizedRunningOrders) {
-                            finalizedData = runningOrderData.finalizedRunningOrders;
-                        } else if (runningOrderData.generatedSheets) {
-                            finalizedData = runningOrderData.generatedSheets;
-                        } else if (runningOrderData.roundOrders) {
-                            finalizedData = runningOrderData.roundOrders;
-                        }
+                   const orderDoc = await db.collection('running_orders').doc(trialId).get();
+if (orderDoc.exists) {
+    const runningOrderData = orderDoc.data();
+    
+    // Always use finalizedRunningOrders as the primary source
+    let finalizedData = runningOrderData.finalizedRunningOrders || {};
+    
+    // If finalizedRunningOrders doesn't exist, fall back to legacy structures
+    if (Object.keys(finalizedData).length === 0) {
+        console.log('⚠️ No finalizedRunningOrders found, converting from legacy structure');
+        
+        // Convert from roundOrders if available
+        if (runningOrderData.roundOrders) {
+            Object.entries(runningOrderData.roundOrders).forEach(([roundKey, participantIds]) => {
+                finalizedData[roundKey] = {
+                    participants: Array.isArray(participantIds) 
+                        ? participantIds.map(id => ({ id }))
+                        : []
+                };
+            });
+        }
+    }
 
                         if (finalizedData) {
                             Object.entries(finalizedData).forEach(function(entry) {
