@@ -1536,20 +1536,74 @@ function getCWAGSClassOrder(className) {
                 console.log('💾 Saving all scores and entry type changes...');
                 showStatus('🔄 Saving scores...', 'info');
                 
-                const scoresRef = db.collection('scores').doc(`${currentTrial.id}_${currentRound.key}`);
-                await scoresRef.set({
-                    ...currentScores,
-                    participantEntryTypes: participantEntryTypes,
-                    detectedClassType: detectClassType(currentRound.className),
-                    classConfig: detectedClassConfig,
-                    roundInfo: {
-                        className: currentRound.className,
-                        roundNumber: currentRound.roundNumber,
-                        judgeName: currentRound.judgeName,
-                        date: currentRound.date
-                    },
-                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-                }, { merge: true });
+                // Standardized score data structure
+const standardizedScoreData = {
+    trialId: currentTrial.id,
+    roundKey: currentRound.key,
+    participantEntryTypes: participantEntryTypes,
+    detectedClassType: detectClassType(currentRound.className),
+    classConfig: detectedClassConfig,
+    roundInfo: {
+        className: currentRound.className,
+        roundNumber: currentRound.roundNumber,
+        judgeName: currentRound.judgeName,
+        date: currentRound.date
+    },
+    lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
+    participants: {}
+};
+
+// Standardize participant data structure
+if (currentScores.participants) {
+    Object.keys(currentScores.participants).forEach(participantId => {
+        const scores = currentScores.participants[participantId];
+        const standardizedParticipant = {
+            participantId: participantId,
+            handlerName: scores.handlerName,
+            dogCallName: scores.dogCallName,
+            cwagsNumber: scores.cwagsNumber,
+            entryType: participantEntryTypes[participantId] || 'regular'
+        };
+
+        // Detect class type and standardize score fields
+        const classType = detectClassType(currentRound.className);
+        
+        if (classType === 'scent') {
+            // Scent work scoring
+            standardizedParticipant.scent1 = scores.scent1 || '';
+            standardizedParticipant.scent2 = scores.scent2 || '';
+            standardizedParticipant.scent3 = scores.scent3 || '';
+            standardizedParticipant.scent4 = scores.scent4 || '';
+            standardizedParticipant.fault1 = scores.fault1 || '';
+            standardizedParticipant.fault2 = scores.fault2 || '';
+            standardizedParticipant.time = scores.time || '';
+            standardizedParticipant.passFail = scores.passFail || '';
+            
+            // Also maintain result field for consistency
+            standardizedParticipant.result = scores.passFail || '';
+        } else {
+            // Numerical scoring (Rally, Games, Obedience)
+            standardizedParticipant.numericalScore = scores.numericalScore || '';
+            standardizedParticipant.passIndicator = scores.passIndicator || '';
+            
+            // Derive result from numerical score and pass indicator
+            if (standardizedParticipant.passIndicator && standardizedParticipant.passIndicator.trim() !== '') {
+                standardizedParticipant.result = standardizedParticipant.passIndicator;
+            } else if (standardizedParticipant.numericalScore !== undefined && standardizedParticipant.numericalScore !== '') {
+                const score = parseFloat(standardizedParticipant.numericalScore);
+                const passingThreshold = classType === 'obedience5' ? 120 : 70;
+                standardizedParticipant.result = score >= passingThreshold ? 'P' : 'F';
+            } else {
+                standardizedParticipant.result = '';
+            }
+        }
+
+        standardizedScoreData.participants[participantId] = standardizedParticipant;
+    });
+}
+
+const scoresRef = db.collection('scores').doc(`${currentTrial.id}_${currentRound.key}`);
+await scoresRef.set(standardizedScoreData, { merge: true });
                 
                 showStatus('✅ All scores and changes saved successfully!', 'success');
                 
