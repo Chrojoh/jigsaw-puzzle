@@ -541,94 +541,148 @@
             return typeStr === 'feo' || typeStr === 'for exhibition only' || typeStr === 'exhibition';
         }
 
-        function getCWAGSClassOrder(className) {
-            if (!className) return 999;
-            
-            // First, clean and normalize the class name
-            const cleanClassName = className.toUpperCase()
-                .replace(/[^A-Z0-9\s]/g, '')
-                .replace(/\s+/g, ' ')
-                .trim();
-            
-            console.log('🏷️ Ordering class:', className, '→', cleanClassName);
-            
-            // Direct match first
-            if (CWAGS_CLASS_ORDER[cleanClassName]) {
-                console.log('✅ Direct match found:', cleanClassName, '→', CWAGS_CLASS_ORDER[cleanClassName]);
-                return CWAGS_CLASS_ORDER[cleanClassName];
-            }
-            
-            // Try without spaces
-            const noSpaceClassName = cleanClassName.replace(/\s/g, '');
-            if (CWAGS_CLASS_ORDER[noSpaceClassName]) {
-                console.log('✅ No-space match found:', noSpaceClassName, '→', CWAGS_CLASS_ORDER[noSpaceClassName]);
-                return CWAGS_CLASS_ORDER[noSpaceClassName];
-            }
-            
-            // Partial matching for variations
-            for (const [code, order] of Object.entries(CWAGS_CLASS_ORDER)) {
-                if (cleanClassName.includes(code) || code.includes(cleanClassName)) {
-                    console.log('✅ Partial match found:', cleanClassName, 'matches', code, '→', order);
-                    return order;
-                }
-            }
-            
-            // Special handling for common patterns
-            if (cleanClassName.includes('PATROL')) {
-                console.log('✅ Pattern match: PATROL → 1');
-                return 1;
-            }
-            if (cleanClassName.includes('DETECTIVE') && !cleanClassName.includes('DIVERSIONS')) {
-                console.log('✅ Pattern match: DETECTIVE → 2');
-                return 2;
-            }
-            if (cleanClassName.includes('INVESTIGATOR')) {
-                console.log('✅ Pattern match: INVESTIGATOR → 3');
-                return 3;
-            }
-            if (cleanClassName.includes('SLEUTH')) {
-                console.log('✅ Pattern match: SLEUTH → 4');
-                return 4;
-            }
-            if (cleanClassName.includes('PRIVATE')) {
-                console.log('✅ Pattern match: PRIVATE → 5');
-                return 5;
-            }
-            if (cleanClassName.includes('DIVERSIONS')) {
-                console.log('✅ Pattern match: DIVERSIONS → 6');
-                return 6;
-            }
-            if (cleanClassName.includes('RANGER')) {
-                // Extract number from ranger
-                const rangerMatch = cleanClassName.match(/RANGER\s*(\d+|[IVX]+)/);
-                if (rangerMatch) {
-                    const num = rangerMatch[1];
-                    if (num === '1' || num === 'I') return 7;
-                    if (num === '2' || num === 'II') return 8;
-                    if (num === '3' || num === 'III') return 9;
-                    if (num === '4' || num === 'IV') return 10;
-                    if (num === '5' || num === 'V') return 11;
-                }
-                console.log('✅ Pattern match: RANGER (default) → 7');
-                return 7;
-            }
-            if (cleanClassName.includes('DASHER')) {
-                // Extract number from dasher
-                const dasherMatch = cleanClassName.match(/DASHER\s*(\d+|[IVX]+)/);
-                if (dasherMatch) {
-                    const num = dasherMatch[1];
-                    if (num === '3' || num === 'III') return 12;
-                    if (num === '4' || num === 'IV') return 13;
-                    if (num === '5' || num === 'V') return 14;
-                    if (num === '6' || num === 'VI') return 15;
-                }
-                console.log('✅ Pattern match: DASHER (default) → 12');
-                return 12;
-            }
-            
-            console.log('⚠️ No match found for:', className, '→ using default order 999');
-            return 999;
+     // Replace the getCWAGSClassOrder function in class-summary-sheet.html
+// This version works correctly with the CWAGS_CLASS_ORDER object structure
+
+function getCWAGSClassOrder(className) {
+    if (!className) return 999;
+    
+    // Clean and normalize the class name
+    const cleanClassName = className.toUpperCase()
+        .replace(/[^A-Z0-9\s]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+    
+    console.log('🏷️ Ordering class:', className, '→', cleanClassName);
+    
+    // Direct match first
+    if (CWAGS_CLASS_ORDER[cleanClassName]) {
+        console.log('✅ Direct match found:', cleanClassName, '→', CWAGS_CLASS_ORDER[cleanClassName]);
+        return CWAGS_CLASS_ORDER[cleanClassName];
+    }
+    
+    // Try without spaces
+    const noSpaceClassName = cleanClassName.replace(/\s/g, '');
+    if (CWAGS_CLASS_ORDER[noSpaceClassName]) {
+        console.log('✅ No-space match found:', noSpaceClassName, '→', CWAGS_CLASS_ORDER[noSpaceClassName]);
+        return CWAGS_CLASS_ORDER[noSpaceClassName];
+    }
+    
+    // Partial matching for variations
+    for (const [code, order] of Object.entries(CWAGS_CLASS_ORDER)) {
+        if (cleanClassName.includes(code) || code.includes(cleanClassName)) {
+            console.log('✅ Partial match found:', cleanClassName, 'matches', code, '→', order);
+            return order;
         }
+    }
+    
+    // Special handling for common patterns that might not be in the mapping
+    if (cleanClassName.includes('PATROL')) {
+        console.log('✅ Pattern match: PATROL → 1');
+        return 1;
+    }
+    if (cleanClassName.includes('DETECTIVE') && !cleanClassName.includes('DIVERSIONS')) {
+        console.log('✅ Pattern match: DETECTIVE → 2');
+        return 2;
+    }
+    if (cleanClassName.includes('INVESTIGATOR')) {
+        console.log('✅ Pattern match: INVESTIGATOR → 3');
+        return 3;
+    }
+    if (cleanClassName.includes('SLEUTH')) {
+        console.log('✅ Pattern match: SLEUTH → 4');
+        return 4;
+    }
+    if (cleanClassName.includes('PRIVATE')) {
+        console.log('✅ Pattern match: PRIVATE → 5');
+        return 5;
+    }
+    if (cleanClassName.includes('DIVERSIONS')) {
+        console.log('✅ Pattern match: DIVERSIONS → 6');
+        return 6;
+    }
+    if (cleanClassName.includes('RANGER')) {
+        // Extract number from ranger
+        const rangerMatch = cleanClassName.match(/RANGER\s*(\d+|[IVX]+)/);
+        if (rangerMatch) {
+            const num = rangerMatch[1];
+            if (num === '1' || num === 'I') return 7;
+            if (num === '2' || num === 'II') return 8;
+            if (num === '3' || num === 'III') return 9;
+            if (num === '4' || num === 'IV') return 10;
+            if (num === '5' || num === 'V') return 11;
+        }
+        console.log('✅ Pattern match: RANGER (generic) → 7');
+        return 7; // Default to Ranger 1
+    }
+    if (cleanClassName.includes('DASHER')) {
+        // Extract number from dasher
+        const dasherMatch = cleanClassName.match(/DASHER\s*(\d+)/);
+        if (dasherMatch) {
+            const num = parseInt(dasherMatch[1]);
+            if (num === 3) return 12;
+            if (num === 4) return 13;
+            if (num === 5) return 14;
+            if (num === 6) return 15;
+        }
+        console.log('✅ Pattern match: DASHER (generic) → 12');
+        return 12; // Default to Dasher 3
+    }
+    if (cleanClassName.includes('OBEDIENCE')) {
+        // Extract number from obedience
+        const obedMatch = cleanClassName.match(/OBEDIENCE\s*(\d+)/);
+        if (obedMatch) {
+            const num = parseInt(obedMatch[1]);
+            if (num === 1) return 16;
+            if (num === 2) return 17;
+            if (num === 3) return 18;
+            if (num === 4) return 19;
+            if (num === 5) return 20;
+        }
+        console.log('✅ Pattern match: OBEDIENCE (generic) → 16');
+        return 16; // Default to Obedience 1
+    }
+    if (cleanClassName.includes('STARTER')) {
+        console.log('✅ Pattern match: STARTER → 21');
+        return 21;
+    }
+    if (cleanClassName.includes('ADVANCED')) {
+        console.log('✅ Pattern match: ADVANCED → 22');
+        return 22;
+    }
+    if (cleanClassName.includes('PRO')) {
+        console.log('✅ Pattern match: PRO → 23');
+        return 23;
+    }
+    if (cleanClassName.includes('ARF')) {
+        console.log('✅ Pattern match: ARF → 24');
+        return 24;
+    }
+    if (cleanClassName.includes('ZOOM')) {
+        // Extract number from zoom
+        if (cleanClassName.includes('1.5')) return 25;
+        if (cleanClassName.includes('1')) return 25;
+        if (cleanClassName.includes('2')) return 26;
+        console.log('✅ Pattern match: ZOOM (generic) → 25');
+        return 25;
+    }
+    if (cleanClassName.includes('GAMES')) {
+        // Extract number from games
+        const gamesMatch = cleanClassName.match(/GAMES\s*(\d+)/);
+        if (gamesMatch) {
+            const num = parseInt(gamesMatch[1]);
+            if (num === 1) return 27;
+            if (num === 2) return 28;
+            if (num === 3) return 29;
+            if (num === 4) return 30;
+        }
+        console.log('✅ Pattern match: GAMES (generic) → 27');
+        return 27; // Default to Games 1
+    }
+    
+    console.log('⚠️ No match found for:', cleanClassName, '→ 999');
+    return 999;
+}
 
         function createHeaderCell(text, className, rowspan) {
             const cell = document.createElement('th');
