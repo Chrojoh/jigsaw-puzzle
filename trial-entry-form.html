@@ -2047,19 +2047,44 @@ await updateRunningOrderOnEntry(entryData, entryId);
                 entryData.selectedEntries.forEach(selectedEntry => {
                     const roundKey = `${selectedEntry.dayIndex}-${selectedEntry.classIndex || 0}-${selectedEntry.roundIndex}`;
                     
-                    // Create the entry ID for running order
-                    const runningOrderEntryId = entryId + '_' + selectedEntry.entryId;
-                    
-                    // Initialize round array if it doesn't exist
-                    if (!roundOrders[roundKey]) {
-                        roundOrders[roundKey] = [];
-                    }
-                    
-                    // Add entry to the end of the running order (if not already present)
-                    if (!roundOrders[roundKey].includes(runningOrderEntryId)) {
-                        roundOrders[roundKey].push(runningOrderEntryId);
-                        console.log(`✅ Added to running order: ${entryData.handlerName} - ${entryData.dogCallName} in round ${roundKey}`);
-                    }
+                   // Create standardized participant entry
+const participantEntry = {
+    id: entryId + '_' + selectedEntry.entryId,
+    handlerName: entryData[STANDARD_FIELDS.HANDLER_NAME],
+    dogCallName: entryData[STANDARD_FIELDS.DOG_CALL_NAME],
+    cwagsNumber: entryData[STANDARD_FIELDS.CWAGS_NUMBER] || 'TBD',
+    entryType: selectedEntry.standardizedEntryType || 'regular'
+};
+
+// Initialize round data if it doesn't exist
+if (!roundOrders[roundKey]) {
+    roundOrders[roundKey] = [];
+}
+
+// Add to legacy roundOrders for backward compatibility
+if (!roundOrders[roundKey].includes(participantEntry.id)) {
+    roundOrders[roundKey].push(participantEntry.id);
+}
+
+// Initialize finalizedRunningOrders structure
+if (!finalizedRunningOrders) {
+    finalizedRunningOrders = {};
+}
+if (!finalizedRunningOrders[roundKey]) {
+    finalizedRunningOrders[roundKey] = {
+        participants: [],
+        className: selectedEntry.standardizedClassName,
+        roundNumber: selectedEntry.standardizedRoundNumber,
+        judgeName: selectedEntry.standardizedJudgeName
+    };
+}
+
+// Add to standardized structure
+const existingParticipant = finalizedRunningOrders[roundKey].participants.find(p => p.id === participantEntry.id);
+if (!existingParticipant) {
+    finalizedRunningOrders[roundKey].participants.push(participantEntry);
+    console.log(`✅ Added to standardized running order: ${entryData[STANDARD_FIELDS.HANDLER_NAME]} - ${entryData[STANDARD_FIELDS.DOG_CALL_NAME]} in round ${roundKey}`);
+}
                 });
                 
                 // Save updated running order
