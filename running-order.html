@@ -1401,14 +1401,45 @@ async function saveRunningOrder() {
             });
         });
 
-        await db.collection('running_orders').doc(currentTrial.id).set({
-            trialId: currentTrial.id,
-            trialName: currentTrial.clubName,
-            roundOrders: roundOrders,
-            lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
-            updatedBy: currentUser.uid
-        });
+       // Standardized structure for consistency across all files
+const standardizedData = {
+    trialId: currentTrial.id,
+    trialName: currentTrial.clubName,
+    lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
+    updatedBy: currentUser.uid,
+    
+    // Primary structure - all files should use this
+    finalizedRunningOrders: {},
+    
+    // Legacy support - maintain for backward compatibility
+    roundOrders: roundOrders,
+    generatedSheets: {}
+};
 
+// Convert roundOrders to finalizedRunningOrders format
+Object.keys(runningOrderData).forEach(dayIndex => {
+    const dayData = runningOrderData[dayIndex];
+    Object.keys(dayData.rounds).forEach(roundKey => {
+        const round = dayData.rounds[roundKey];
+        standardizedData.finalizedRunningOrders[roundKey] = {
+            participants: round.entries.map(entry => ({
+                id: entry.id,
+                handlerName: entry.handlerName,
+                dogCallName: entry.dogCallName,
+                cwagsNumber: entry.cwagsNumber,
+                entryType: entry.entryType || 'regular'
+            })),
+            className: round.className,
+            roundNumber: round.roundNumber,
+            judgeName: round.judgeName
+        };
+        
+        // Also populate generatedSheets for maximum compatibility
+        standardizedData.generatedSheets[roundKey] = standardizedData.finalizedRunningOrders[roundKey];
+    });
+});
+
+await db.collection('running_orders').doc(currentTrial.id).set(standardizedData);
         showStatus('Running order saved successfully!', 'success');
     } catch (error) {
         console.error('Error saving running order:', error);
