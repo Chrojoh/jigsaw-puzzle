@@ -664,30 +664,78 @@ function isFeoEntry(entryType) {
 
 // ===== ENHANCED RESULT PROCESSING =====
 function processParticipantResult(participantResult) {
-   // Check for enhanced numerical scoring (Rally, Games, Obedience)
-   if (participantResult.numericalScore !== undefined && participantResult.passIndicator !== undefined) {
-       console.log('📊 Found numerical score:', participantResult.numericalScore, 'Pass indicator:', participantResult.passIndicator);
-       
-       if (participantResult.passIndicator && participantResult.passIndicator.trim() !== '') {
-           // Show actual pass indicator instead of just "P"
-           return { result: participantResult.passIndicator, cssClass: 'result-pass' };
-       } else if (participantResult.numericalScore !== undefined && participantResult.numericalScore !== '') {
-           return { result: 'F', cssClass: 'result-fail' };
-       }
-   }
-   
-   // Check for traditional scent work scoring
-   if (participantResult.passFail) {
-       if (participantResult.passFail === 'Pass') {
-           return { result: 'P', cssClass: 'result-pass' };
-       } else if (participantResult.passFail === 'Fail') {
-           return { result: 'F', cssClass: 'result-fail' };
-       }
-   }
-   
-   return { result: '-', cssClass: 'result-absent' };
+    console.log('🔍 Processing participant result:', participantResult);
+    
+    // Priority 1: Use standardized result field if available
+    if (participantResult.result && participantResult.result.trim() !== '') {
+        const result = participantResult.result.trim();
+        console.log('✅ Using standardized result field:', result);
+        
+        if (result === 'P' || result === 'Pass') {
+            return { result: 'P', cssClass: 'result-pass' };
+        } else if (result === 'F' || result === 'Fail') {
+            return { result: 'F', cssClass: 'result-fail' };
+        } else if (result !== '-' && result !== '') {
+            // Games subclasses or other pass indicators
+            return { result: result, cssClass: 'result-pass' };
+        }
+    }
+    
+    // Priority 2: Process numerical scoring
+    if (participantResult.numericalScore !== undefined) {
+        const score = parseFloat(participantResult.numericalScore);
+        const passIndicator = participantResult.passIndicator;
+        
+        console.log('📊 Found numerical score:', score, 'Pass indicator:', passIndicator);
+        
+        // If there's a pass indicator, use it (for Games subclasses)
+        if (passIndicator && passIndicator.trim() !== '') {
+            console.log('✅ Using pass indicator:', passIndicator);
+            return { result: passIndicator, cssClass: 'result-pass' };
+        }
+        
+        // Evaluate numerical score against passing threshold
+        if (!isNaN(score) && score !== '') {
+            const passingScore = getPassingThreshold(participantResult.className);
+            
+            if (score >= passingScore) {
+                console.log('✅ Numerical score passes:', score, '>=', passingScore);
+                return { result: 'P', cssClass: 'result-pass' };
+            } else {
+                console.log('❌ Numerical score fails:', score, '<', passingScore);
+                return { result: 'F', cssClass: 'result-fail' };
+            }
+        }
+    }
+    
+    // Priority 3: Legacy scent work scoring
+    if (participantResult.passFail) {
+        console.log('🔍 Found legacy passFail:', participantResult.passFail);
+        if (participantResult.passFail === 'Pass') {
+            return { result: 'P', cssClass: 'result-pass' };
+        } else if (participantResult.passFail === 'Fail') {
+            return { result: 'F', cssClass: 'result-fail' };
+        }
+    }
+    
+    console.log('⚠️ No valid result found, marking as absent');
+    return { result: '-', cssClass: 'result-absent' };
 }
 
+// Helper function for passing thresholds
+function getPassingThreshold(className) {
+    if (!className) return 70;
+    
+    const lowerClassName = className.toLowerCase();
+    
+    // Obedience 5 has higher threshold
+    if (lowerClassName.includes('obedience') && lowerClassName.includes('5')) {
+        return 120;
+    }
+    
+    // All other numerical classes use 70
+    return 70;
+}
 // ===== FEO + ORPHANED SCORE DETECTION =====
 function shouldExcludeParticipantEnhanced(participant, participantId) {
    // First check for orphaned scores (deleted entries)
