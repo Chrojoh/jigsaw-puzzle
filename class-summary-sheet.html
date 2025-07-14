@@ -985,7 +985,9 @@ function getPassingThreshold(className) {
             
             // Get scored rounds - look for BOTH traditional and numerical scoring
             const rounds = [];
-            const scoresSnapshot = await db.collection('scores').get();
+           const scoresSnapshot = await db.collection('scores')
+    .where('trialId', '==', trialId)
+    .get();
             
             console.log('📊 ENHANCED: Checking ' + scoresSnapshot.size + ' score documents for ' + className);
             
