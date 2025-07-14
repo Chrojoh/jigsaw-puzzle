@@ -2025,91 +2025,109 @@ await updateRunningOrderOnEntry(entryData, entryId);
             }
         }
 
-        // Update running order when entry is submitted
-        async function updateRunningOrderOnEntry(entryData, entryId) {
-            try {
-                console.log('📊 Updating running order for new entry...');
-                
-                // Load existing running order or create new one
-                let runningOrderDoc;
-                try {
-                    runningOrderDoc = await db.collection('running_orders').doc(entryData.trialId).get();
-                } catch (error) {
-                    console.log('No existing running order found, will create new structure');
-                }
-                
-                let roundOrders = {};
-                if (runningOrderDoc && runningOrderDoc.exists) {
-                    roundOrders = runningOrderDoc.data().roundOrders || {};
-                }
-                
-                // Add each selected entry to appropriate round
-                entryData.selectedEntries.forEach(selectedEntry => {
-                    const roundKey = `${selectedEntry.dayIndex}-${selectedEntry.classIndex || 0}-${selectedEntry.roundIndex}`;
-                    
-                   // Create standardized participant entry
-const participantEntry = {
-    id: entryId + '_' + selectedEntry.entryId,
-    handlerName: entryData[STANDARD_FIELDS.HANDLER_NAME],
-    dogCallName: entryData[STANDARD_FIELDS.DOG_CALL_NAME],
-    cwagsNumber: entryData[STANDARD_FIELDS.CWAGS_NUMBER] || 'TBD',
-    entryType: selectedEntry.standardizedEntryType || 'regular'
-};
+// CORRECTED updateRunningOrderOnEntry function for trial-entry-form.html
+// This fixes the "undefined" error by properly initializing variables
 
-// Initialize round data if it doesn't exist
-if (!roundOrders[roundKey]) {
-    roundOrders[roundKey] = [];
-}
-
-// Add to legacy roundOrders for backward compatibility
-if (!roundOrders[roundKey].includes(participantEntry.id)) {
-    roundOrders[roundKey].push(participantEntry.id);
-}
-
-// Initialize finalizedRunningOrders structure
-if (!finalizedRunningOrders) {
-    finalizedRunningOrders = {};
-}
-if (!finalizedRunningOrders[roundKey]) {
-    finalizedRunningOrders[roundKey] = {
-        participants: [],
-        className: selectedEntry.standardizedClassName,
-        roundNumber: selectedEntry.standardizedRoundNumber,
-        judgeName: selectedEntry.standardizedJudgeName
-    };
-}
-
-// Add to standardized structure
-const existingParticipant = finalizedRunningOrders[roundKey].participants.find(p => p.id === participantEntry.id);
-if (!existingParticipant) {
-    finalizedRunningOrders[roundKey].participants.push(participantEntry);
-    console.log(`✅ Added to standardized running order: ${entryData[STANDARD_FIELDS.HANDLER_NAME]} - ${entryData[STANDARD_FIELDS.DOG_CALL_NAME]} in round ${roundKey}`);
-}
-                });
-                
-               // Save both legacy and standardized structures
-await db.collection('running_orders').doc(entryData.trialId).set({
-    trialId: entryData.trialId,
-    trialName: entryData.trialName,
-    
-    // Standardized structure (primary)
-    finalizedRunningOrders: finalizedRunningOrders,
-    
-    // Legacy structures (for backward compatibility)
-    roundOrders: roundOrders,
-    generatedSheets: finalizedRunningOrders,
-    
-    lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
-    updatedBy: entryData.submittedBy || 'entry_form'
-}, { merge: true });
-                
-                console.log('📊 Running order updated successfully');
-                
-            } catch (error) {
-                console.error('❌ Error updating running order:', error);
-                // Don't fail the entry submission if running order update fails
+async function updateRunningOrderOnEntry(entryData, entryId) {
+    try {
+        console.log('📊 Updating running order for new entry...');
+        
+        // Load existing running order or create new one
+        let runningOrderDoc;
+        let roundOrders = {};
+        let finalizedRunningOrders = {}; // Initialize this variable here!
+        
+        try {
+            runningOrderDoc = await db.collection('running_orders').doc(entryData.trialId).get();
+            
+            if (runningOrderDoc && runningOrderDoc.exists) {
+                const existingData = runningOrderDoc.data();
+                roundOrders = existingData.roundOrders || {};
+                finalizedRunningOrders = existingData.finalizedRunningOrders || {}; // Load existing structure
             }
+        } catch (error) {
+            console.log('No existing running order found, will create new structure');
         }
+        
+        // Add each selected entry to appropriate round
+        entryData.selectedEntries.forEach(selectedEntry => {
+            const roundKey = `${selectedEntry.dayIndex}-${selectedEntry.classIndex || 0}-${selectedEntry.roundIndex}`;
+            
+            // Create standardized participant entry
+            const participantEntry = {
+                id: entryId + '_' + selectedEntry.entryId,
+                handlerName: entryData[STANDARD_FIELDS.HANDLER_NAME],
+                dogCallName: entryData[STANDARD_FIELDS.DOG_CALL_NAME],
+                cwagsNumber: entryData[STANDARD_FIELDS.CWAGS_NUMBER] || 'TBD',
+                entryType: selectedEntry.standardizedEntryType || 'regular'
+            };
+
+            // Initialize round data if it doesn't exist
+            if (!roundOrders[roundKey]) {
+                roundOrders[roundKey] = [];
+            }
+
+            // Add to legacy roundOrders for backward compatibility
+            if (!roundOrders[roundKey].includes(participantEntry.id)) {
+                roundOrders[roundKey].push(participantEntry.id);
+            }
+
+            // Initialize finalizedRunningOrders structure
+            if (!finalizedRunningOrders[roundKey]) {
+                finalizedRunningOrders[roundKey] = {
+                    participants: [],
+                    className: selectedEntry.standardizedClassName,
+                    roundNumber: selectedEntry.standardizedRoundNumber,
+                    judgeName: selectedEntry.standardizedJudgeName
+                };
+            }
+
+            // Add to standardized structure
+            const existingParticipant = finalizedRunningOrders[roundKey].participants.find(p => p.id === participantEntry.id);
+            if (!existingParticipant) {
+                finalizedRunningOrders[roundKey].participants.push(participantEntry);
+                console.log(`✅ Added to standardized running order: ${entryData[STANDARD_FIELDS.HANDLER_NAME]} - ${entryData[STANDARD_FIELDS.DOG_CALL_NAME]} in round ${roundKey}`);
+            }
+        });
+        
+        // Save both legacy and standardized structures
+        const updateData = {
+            trialId: entryData.trialId,
+            trialName: entryData.trialName,
+            
+            // Standardized structure (primary)
+            finalizedRunningOrders: finalizedRunningOrders,
+            
+            // Legacy structures (for backward compatibility)
+            roundOrders: roundOrders,
+            generatedSheets: finalizedRunningOrders,
+            
+            lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
+            updatedBy: entryData.submittedBy || 'entry_form'
+        };
+        
+        // Validate data before saving
+        console.log('📋 Validating data before save:', {
+            finalizedRunningOrdersKeys: Object.keys(finalizedRunningOrders),
+            roundOrdersKeys: Object.keys(roundOrders),
+            hasUndefinedValues: JSON.stringify(updateData).includes('undefined')
+        });
+        
+        if (JSON.stringify(updateData).includes('undefined')) {
+            console.error('❌ Detected undefined values in update data');
+            throw new Error('Cannot save data containing undefined values');
+        }
+        
+        await db.collection('running_orders').doc(entryData.trialId).set(updateData, { merge: true });
+        
+        console.log('📊 Running order updated successfully');
+        
+    } catch (error) {
+        console.error('❌ Error updating running order:', error);
+        // Don't fail the entry submission if running order update fails
+        console.warn('⚠️ Entry submission will continue despite running order error');
+    }
+}
 
         // Setup form event listeners
         function setupFormEventListeners() {
